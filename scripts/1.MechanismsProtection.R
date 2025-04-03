@@ -5,6 +5,8 @@
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
+#Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
+
 #----------------- 
 #Summary mechanisms
 
@@ -40,7 +42,7 @@ names(ppC) <- paste0("CONUS.",names(ppC))
 pp <- cbind(pp,ppC[,c("CONUS.RiverKM","CONUS.Percent","CONUS.RiverMI")])
 write.csv(pp,"outputs/Table1.csv")
 
-#-------------
+#-------------------------------------------------
 #Barplot PRI results
 library(reshape2); library(dplyr); library(RColorBrewer); library(scales); library(sf); library(MESS)
 library(ggplot2); library(waffle)
@@ -75,7 +77,42 @@ dev.off()
 
 #-------------------------------------------
 #Network of mechanisms
+library(sf); library(reshape2)
+net <- st_read("outputs/NPRALayer_segment.gpkg")
+net <- st_drop_geometry(net)
 
+net$PRI_Class <- ifelse(net$PRI ==0,"Unprotected",ifelse(net$PRI <= 1.25, "Class 4",
+                                                         ifelse(net$PRI <= 2.5 & net$PRI > 1.25, "Class 3",
+                                                                ifelse(net$PRI <= 3.75  & net$PRI > 2.5, "Class 2",
+                                                                       ifelse(net$PRI > 3.75, "Class 1",NA)))))
+pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net)))
+mat <- net[,pick]
+mat_len <- mat * net$TotalLen
+
+#rename
+colnames(mat)[colnames(mat) =="RIP_State.riparian.buffers"] <- "RIP_State.Riparian.Buffers"
+colnames(mat_len)[colnames(mat_len) =="RIP_State.riparian.buffers"] <- "RIP_State.Riparian.Buffers"
+
+#select only protected segments
+mat <- mat[-which(apply(mat,1,sum)==0),]
+dim(mat)
+
+#frequencies
+DAAT_abs1 <- apply(mat,2,sum)/nrow(mat)
+write.table(DAAT_abs1,"outputs/FrequenciesMechanisms.csv")
+
+#prevalence (for nodes)
+DAAT_abs <- apply(mat_len,2,sum)/sum(net$TotalLen)
+write.table(DAAT_abs,"outputs/PrevalenceMechanisms.csv")
+
+#using co-occurence
+mat <- cbind(0,0,0,0,mat)#dummy variables at the beginning
+cor_v <- ecospat.co_occurrences(data=mat)#remove the first 4 columns
+
+write.table(cor_v,"outputs/CooccurrenceMechanisms.csv")
+
+
+##########################Figure
 library(igraph); library(corrplot); library(ecospat); library(pheatmap) ; library(ggraph); library(cowplot)
 
 darken <- function(color, factor=1.4){
@@ -86,9 +123,9 @@ darken <- function(color, factor=1.4){
 }
 
 
-cor_v <- read.table("data/CooccurrenceMechanisms.csv")
-DAAT_abs1 <- read.table("data/FrequenciesMechanisms.csv")
-DAAT_abs <- read.table("data/PrevalenceMechanisms.csv")
+cor_v <- read.table("outputs/CooccurrenceMechanisms.csv")
+DAAT_abs1 <- read.table("outputs/FrequenciesMechanisms.csv")
+DAAT_abs <- read.table("outputs/PrevalenceMechanisms.csv")
 
 #quick overview of mean co-occurrence
 sort(apply(cor_v,1,mean))
@@ -169,10 +206,37 @@ g %>%
 dev.off()
 
 
-#-------------------------------------------------------
-#Figure number of mechanisms
+#------------------------------
+#Number of mechanisms
 
-F_stat_state <- read.csv("data/NumberMecha_s.csv")
+library(sf); library(reshape2)
+
+net <- st_read("data/NPRALayer_segment.gpkg")
+net <- st_drop_geometry(net)
+pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net)))
+mat <- net[,pick]
+
+mat <- ifelse(mat>0,1,0)
+
+net$NumberMechanism <- apply(mat,1,sum)
+mean(net$NumberMechanism,na.rm=T)
+mean(net$NumberMechanism[net$NumberMechanism>0])
+tapply(net$NumberMechanism[net$NumberMechanism>0],net$PRI_Class[net$NumberMechanism>0],mean)
+net$NumberMechanism <- ifelse(net$NumberMechanism >= 5,"≥5",net$NumberMechanism)
+net$NumberMechanism <- factor(net$NumberMechanism,levels=c("1","2","3","4","≥5"))
+net$PRI_Class <- ifelse(net$PRI ==0,"Unprotected",ifelse(net$PRI <= 1.25, "Class 4",
+                                                         ifelse(net$PRI <= 2.5 & net$PRI > 1.25, "Class 3",
+                                                                ifelse(net$PRI <= 3.75  & net$PRI > 2.5, "Class 2",
+                                                                       ifelse(net$PRI > 3.75, "Class 1",NA)))))
+
+vari = c("Class 4","Class 3","Class 2","Class 1")
+F_stat_state <- aggregate(FinalProt_LenT ~ NumberMechanism,sum,data=net)
+F_stat_state$protect <- F_stat_state$FinalProt_LenT*100/sum(net$TotalLen)
+
+write.csv(F_stat_state,"outputs/NumberMecha_s.csv",row.names=F)
+
+#Figure
+F_stat_state <- read.csv("outputs/NumberMecha_s.csv")
 
 cols_bar <- rev(c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))
 
@@ -187,28 +251,3 @@ mtext(side=1,"Number of mechanisms",cex=1.3,line=2)
 text(b,F_stat_state$FinalProt_LenT+10000,paste0(format(round(F_stat_state$protect,1),nsmall=1),"%"),col=rep(cols_bar,each=5),cex=0.7)
 legend(bty="n","topleft",col=(cols_bar),pch=15,c("Comprehensive","Effective","Limited","Inadequate"),pt.cex=2.2,cex=1,inset=c(0.1,0))
 dev.off()
-
-#------------------------------
-#summary statistics mechanisms
-
-library(sf); library(reshape2)
-
-net <- st_read("data/NPRALayer_segment.gpkg")
-net <- st_drop_geometry(net)
-pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net)))
-mat <- net[,pick]
-
-net$PRI_Class <- ifelse(net$PRI <= 1.25, "Inadequate",
-                        ifelse(net$PRI <= 2.5, "Limited",
-                               ifelse(net$PRI <= 3.75, "Effective",
-                                      ifelse(net$PRI >3.75, "Comprehensive",NA))))
-
-
-mat <- ifelse(mat>0,1,0)
-
-net$NumberMechanism <- apply(mat,1,sum)
-mean(net$NumberMechanism[net$NumberMechanism>0])#1.562081
-tapply(net$NumberMechanism[net$NumberMechanism>0],net$PRI_Class[net$NumberMechanism>0],mean)
-#Comprehensive     Effective    Inadequate       Limited 
-#2.799704      2.101047      1.298412      1.252820 
-

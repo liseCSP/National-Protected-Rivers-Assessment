@@ -6,6 +6,8 @@
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
+#Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
+
 library(sf); library(tidyverse); library(spatialEco); library(naniar)
 
 huc12 <- st_read("data/NPRALayer_huc12_revised_2_28_25.gpkg")

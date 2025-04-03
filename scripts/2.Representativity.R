@@ -5,10 +5,11 @@
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
+#Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
 
 library(sf); library(reshape2); library(stringr); library(dplyr); library(ggplot2)
 
-net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
+net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv") #tabular version of NPRALayer_segment
 
 #-------------------------------------------------------
 #Import the data
@@ -56,6 +57,7 @@ table(net_s$FLOWDIR[!net_s$COMID %in% dat$COMID],useNA="ifany")
 net_s <- net_s[(net_s$FLOWDIR %in% c("With Digitized")),] 
 
 #add elevation
+#MINELEVRAW from NHDPlusV2.1 (https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data)
 EI <- read.csv("data/Contextualization_NPRA.csv")
 net_s <- data.frame(net_s,Elev = EI$MINELEVRAW[match(net_s$COMID_LC,EI$COMID_L)])
 
