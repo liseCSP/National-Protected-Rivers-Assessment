@@ -1,6 +1,11 @@
 #--------------------------------------------------------
 #Representativity
 #---------------------------------------------------------
+#Lise Comte, April 2025
+#in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
+#Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
+
+
 library(sf); library(reshape2); library(stringr); library(dplyr); library(ggplot2)
 
 net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
