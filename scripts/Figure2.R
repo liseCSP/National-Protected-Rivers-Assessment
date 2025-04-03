@@ -271,51 +271,15 @@ dev.off()
 
 
 #------------------------------------------------------------------------------------------
-#combined figure - Representativity
+#combined figure - Representative
 #-----------------------------------------------------------------------------------------
 
-# Create datasets
 #-------------------------------------------------------
 #protection
 #------------------------------------------------------
 net_s$RIP_Class <- factor(net_s$RIP_Class,levels=c("Unprotected","Class 4","Class 3","Class 2","Class 1"))
 
-net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
-net_protect_seg_fin$HUC_12 <- ifelse(sapply(strsplit(net_protect_seg_fin$HUC_12,"*"),length)==11,paste0("0",net_protect_seg_fin$HUC_12),net_protect_seg_fin$HUC_12)
-
-net_protect_seg_fin$Basin <- sapply(strsplit(as.character(net_protect_seg_fin$HUC_12),"*"),function(x) paste(x[1:2],collapse="",sep=""))
-
-net_protect_seg_fin$Basin <- ifelse(net_protect_seg_fin$Basin == "01","New England (01)",
-                                    ifelse(net_protect_seg_fin$Basin == "02","Mid-Atlantic (02)",
-                                           ifelse(net_protect_seg_fin$Basin == "03","S. Atlantic Gulf (03)",
-                                                  ifelse(net_protect_seg_fin$Basin == "04","Great Lakes (04)",
-                                                         ifelse(net_protect_seg_fin$Basin == "05","Ohio (05)",
-                                                                ifelse(net_protect_seg_fin$Basin == "06","Tennessee (06)",
-                                                                       ifelse(net_protect_seg_fin$Basin == "07","Upper Mississippi (07)",
-                                                                              ifelse(net_protect_seg_fin$Basin == "08","Lower Mississippi (08)",
-                                                                                     ifelse(net_protect_seg_fin$Basin == "09","Souris-Red-Rainy (09)",
-                                                                                            ifelse(net_protect_seg_fin$Basin == "10","Missouri (10)",
-                                                                                                   ifelse(net_protect_seg_fin$Basin == "11","Arkansas-White-Red (11)",
-                                                                                                          ifelse(net_protect_seg_fin$Basin == "12","Texas Gulf (12)",
-                                                                                                                 ifelse(net_protect_seg_fin$Basin == "13","Rio Grande (13)",
-                                                                                                                        ifelse(net_protect_seg_fin$Basin == "14","Upper Colorado (14)",
-                                                                                                                               ifelse(net_protect_seg_fin$Basin == "15","Lower Colorado (15)",
-                                                                                                                                      ifelse(net_protect_seg_fin$Basin == "16","Great Basin (16)",
-                                                                                                                                             ifelse(net_protect_seg_fin$Basin == "17","Pacific NW (17)",
-                                                                                                                                                    ifelse(net_protect_seg_fin$Basin == "18","California (18)",
-                                                                                                                                                           ifelse(net_protect_seg_fin$Basin == "19","Alaska (19)",
-                                                                                                                                                                  ifelse(net_protect_seg_fin$Basin == "20","Hawaii (20)",NA))))))))))))))))))))
-net_protect_seg_fin$Basin <- factor(net_protect_seg_fin$Basin,levels=c("New England (01)","Mid-Atlantic (02)","S. Atlantic Gulf (03)","Great Lakes (04)",
-                                                                       "Ohio (05)","Tennessee (06)","Upper Mississippi (07)","Lower Mississippi (08)","Souris-Red-Rainy (09)",
-                                                                       "Missouri (10)","Arkansas-White-Red (11)","Texas Gulf (12)","Rio Grande (13)","Upper Colorado (14)",
-                                                                       "Lower Colorado (15)","Great Basin (16)","Pacific NW (17)","California (18)","Alaska (19)","Hawaii (20)"))
-
-# F_stat_state1 <- aggregate(OverallProtection_Len_m ~ Basin + RIP_Class,sum,data=net_protect_seg_fin,drop=F)
-# F_stat_stateT <- aggregate(Total_Length_m ~ Basin,sum,data=net_protect_seg_fin,drop=F)
-# F_stat_state1$OverallProtection_Len_m <- F_stat_state1$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state1$Basin,F_stat_stateT$Basin)]
-# F_stat_state1$RIP_Class <- factor(F_stat_state1$RIP_Class)
-# names(F_stat_state1) <- c("individual","observation","value")
-# F_stat_state1$group = "Ecoregion"
+#major habitat types
 F_stat_state1 <- aggregate(OverallProtection_Len_m ~ MHT_TXT + RIP_Class,sum,data=net_protect_seg_fin,drop=F)
 F_stat_stateT <- aggregate(Total_Length_m ~ MHT_TXT,sum,data=net_protect_seg_fin,drop=F)
 F_stat_state1$OverallProtection_Len_m <- F_stat_state1$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state1$MHT_TXT,F_stat_stateT$MHT_TXT)]
@@ -323,7 +287,8 @@ F_stat_state1$RIP_Class <- factor(F_stat_state1$RIP_Class)
 names(F_stat_state1) <- c("individual","observation","value")
 F_stat_state1$group = "Ecoregion"
 
-#second is size class
+
+#Size class
 net_s$Size_Class <- ifelse(net_s$Size_Class=="HW","Headwater",
                                    ifelse(net_s$Size_Class=="SC","Small creek",
                                           ifelse(net_s$Size_Class=="LC","Large creek",
@@ -342,7 +307,7 @@ names(F_stat_state2) <- c("individual","observation","value")
 F_stat_state2$group = "Size class"
 F_stat_state2 <- F_stat_state2[!is.na(F_stat_state2$individual)==T,]
 
-#third is temperature
+#Temperature regime
 net_s$JulAug_Class[net_s$JulAug_Class=="Very Cold"] <- "Cold"
 net_s$JulAug_Class <- factor(net_s$JulAug_Class,levels=c("Cold","Cool","Cool-Warm","Warm"))
 F_stat_state3 <- aggregate(OverallProtection_Len_m ~ JulAug_Class + RIP_Class,sum,data=net_s,drop=F)
@@ -352,7 +317,7 @@ F_stat_state3$RIP_Class <- factor(F_stat_state3$RIP_Class)
 names(F_stat_state3) <- c("individual","observation","value")
 F_stat_state3$group = "Temperature class"
 
-#fourth is hydrology type
+#Hydrology type
 net_s$g8[net_s$g8 %in% c(1,8) ] <- "Perennial runoff"
 net_s$g8[net_s$g8 %in% c(4) ] <- "Perennial flashy"
 net_s$g8[net_s$g8 %in% c(5,7) ] <- "Intermittent"
@@ -367,20 +332,10 @@ F_stat_state4$RIP_Class <- factor(F_stat_state4$RIP_Class)
 names(F_stat_state4) <- c("individual","observation","value")
 F_stat_state4$group = "Hydrology class"
 
-
 data <- rbind(F_stat_state1,F_stat_state2,F_stat_state3,F_stat_state4)
 data$group <- factor(data$group,levels=c("Ecoregion","Size class","Hydrology class","Temperature class"))
 
-#---------------------------
-#characteristics
-#---------------------------
-##a <- table(net_s$StreamOrde)*100/sum(table(net_s$StreamOrde))
-#F_stat_stateT <- aggregate(Total_Length_m ~ StreamOrde,sum,data=net_s)
-#a <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-#names(a) <- F_stat_stateT$StreamOrde
-# F_stat_stateT <- aggregate(Total_Length_m ~ Basin,sum,data=net_protect_seg_fin)
-# a <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# names(a) <- F_stat_stateT$Basin
+#Total length per category
 F_stat_stateT <- aggregate(Total_Length_m ~ MHT_TXT,sum,data=net_protect_seg_fin)
 a <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
 names(a) <- F_stat_stateT$MHT_TXT
@@ -406,13 +361,8 @@ data_c$group <- factor(data_c$group,levels=c("Ecoregion","Size class","Hydrology
 data_c$value <- -data_c$value
 data_c$observation <- "Representation"
 
-#------------------------------------------
-data <- rbind(data,data_c)
-data$value[is.na(data$value)] <- 0
-write.csv(data,"outputs/representativness.csv")
 
-#-----------------------------------------
-#data <- read.csv("outputs/representativness.csv")
+#Prepare table
 data$observation <- factor(data$observation)
 empty_bar <- 2
 nObsType <- nlevels(as.factor(data$observation))
@@ -429,7 +379,7 @@ data <- data[-which(data$observation == "Unprotected"),]
 # Get the name and the y position of each label
 label_data <- data %>% group_by(id, individual) %>% summarize(tot=sum(value[!observation == "Representation"]))
 number_of_bar <- nrow(label_data)
-angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     
 label_data$hjust <- ifelse( angle < -90, 1, 0)
 label_data$angle <- ifelse(angle < -90, angle+180, angle)
 label_data$angle[angle==-90] <- 90 #small adjustement to avoid inverted label
@@ -456,28 +406,24 @@ data$observation[which(data$observation=="Class 3")] <- "Limited"
 data$observation[which(data$observation=="Class 4")] <- "Inadequate"
 data$observation <- factor(data$observation,levels=c("Comprehensive","Effective","Limited","Inadequate","Representation"))
 
-# label_data$individual[label_data$individual == "temperate coastal rivers"] <- "temperate coastal
-# rivers"
-# label_data$individual[label_data$individual == "temperate upland rivers"] <- "temperate upland
-# rivers"
 label_data$individual[label_data$individual == "large lakes"] <- "large lake basins"
 label_data$individual[label_data$individual == "temperate floodplain rivers and wetlands"] <- "temperate floodplain rivers"
 label_data$individual[label_data$individual == "tropical and subtropical coastal rivers"] <- "tropical and subtropical coastal"
 label_data$individual[label_data$individual == "xeric freshwaters and endorheic (closed) basins"] <- "xeric freshwaters and
 endorheic (closed) basins"
 
+#format labels
 label_data$individual <- Hmisc::capitalize(label_data$individual)
-  
+
+# Make the plot  
 colo <- c("Comprehensive" = '#0070FF', "Effective" = '#00C5FF', "Limited" = '#C500FF',"Inadequate" = '#CCCCCC',"Representation" = "white")
-# Make the plot
+
 p <- ggplot(data) +      
   
   # Add the stacked bar
   geom_bar(aes(x=as.factor(id), y=value, fill=observation), stat="identity", alpha=1,color="black",lwd=0.2) +
   scale_fill_manual("", values = colo,labels=c("Comprehensive", "Effective", "Limited","Inadequate","Total river length"),na.translate = F) +
-  #scale_colour_manual(name="",values=c("Class 1" = '#0070FF', "Class 2" = '#00C5FF', "Class 3" = '#C500FF',"Class 4" = '#CCCCCC',"Total river length" = "white")) +
-  
-  
+
   # Add axes
   geom_segment(data=grid_data, aes(x = end, y = 0, xend = start, yend = 0), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   geom_segment(data=grid_data, aes(x = end, y = 20, xend = start, yend = 20), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
@@ -490,13 +436,13 @@ p <- ggplot(data) +
   geom_segment(data=grid_data, aes(x = end, y = -60, xend = start, yend = 60), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   geom_segment(data=grid_data, aes(x = end, y = -80, xend = start, yend = 80), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   
-  # Add text showing the value of each 100/75/50/25 lines
+  # Add text showing the value axes
   ggplot2::annotate("text", x = rep(max(data$id),5), y = c(0, 20, 40, 60, 80), label = c("0%", "20%", "40%", "60%", "80%") , color="grey", size=3 , angle=0, fontface="bold", hjust=1) +
   
   ylim(-80,135) +
   theme_minimal() +
   theme(
-    legend.position = c(.2,0.2),#"bottomleft",
+    legend.position = c(.2,0.2),
     axis.text = element_blank(),
     axis.title = element_blank(),
     panel.grid = element_blank(),
@@ -508,55 +454,13 @@ p <- ggplot(data) +
   geom_text(data=label_data, aes(x=id, y=tot+5, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=3.5, angle= label_data$angle, inherit.aes = FALSE) +
   
   # Add base line information
-  #geom_segment(data=base_data, aes(x = start, y = -5, xend = end, yend = -5), colour = "black", alpha=0.8, size=0.6 , inherit.aes = FALSE )  +
   geom_text(data=base_data, aes(x = title, y = 115, label=c("(a)","(b)","(c)","(d)")), hjust=c(1,1,0,0), colour = "black", alpha=0.8, size=4, fontface="bold", inherit.aes = FALSE)
 
-ggsave("outputs/Figure2.jpeg", plot=p,width=8, height=8)
+ggsave("outputs/Figurerepresentativity.jpeg", plot=p,width=8, height=8)
 
 #------------------------------------------------------------------
-#Assessing bias
-#-----------------------------------------------------------------
-library(transport)
-data <- read.csv("outputs/representativness.csv")
-data$value <- abs(data$value)
+#Assessing unbalances
 
-# The representativeness refers to the degree to which the statistical distribution of the environmental
-# and socioecological attributes captured in the gauge network is similar to the statistical distribution of values for all rivers of the world. Representativeness was
-# quantified by the 2-Wasserstein distance, which identifies disparities between the two distributions20,21. Wasserstein distances are absolute values so the directionality
-# of divergence in distributions (whether the disparity was caused by over- or under-representation in the sample distribution) was identified using standardized
-# bias according to variable means54. Positive values indicated that variables were over-represented for river segments containing gauges versus all river segments,
-# whereas negative values indicated under-representation.
-
-#---------------------------
-#using only viable
-#--------------------------
-#hydrology type
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Class 1","Class 2","Class 3"),])
-p_tot <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Representation"),])
-
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
-
-#ecoregion (is in fact major habitat types)
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Class 1","Class 2","Class 3"),])
-p_tot <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Representation"),])
-
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
-
-#size class
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Class 1","Class 2","Class 3"),])
-p_tot <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Representation"),])
-
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
-
-#temperature class
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Class 1","Class 2","Class 3"),])
-p_tot <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Representation"),])
-
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value = 0.7266
-
-#---------------------------
-#using all kind of protection
-#--------------------------
 #hydrology type
 p_obs <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Representation"),])
