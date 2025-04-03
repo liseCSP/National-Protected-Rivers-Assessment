@@ -1,6 +1,6 @@
 #---------------------------------------------------------
 #Analysis in/out protection
-#---------------------------------------------------------
+
 #Lise Comte, April 2025
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
@@ -99,7 +99,7 @@ sk1
 # save it as an html
 saveNetwork(sk1, "outputs/SankeyProtection_huc12.html")
 
-# convert it as png
+# convert it as jpeg
 webshot("outputs/SankeyProtection_huc12.html","outputs/SankeyProtection_huc12.jpeg", vwidth = 1800, vheight = 2200, zoom = 3)
 
 
@@ -183,13 +183,12 @@ PROTECTION <- read.csv("data/Protection_CRBstates_InOut_huc12.csv")
 names(PROTECTION)[names(PROTECTION)=="IN"] <- "To"
 names(PROTECTION)[names(PROTECTION)=="State"] <- "From"
 
-#PROTECTION <- PROTECTION[!PROTECTION$State %in% c("Alaska","Hawaii"),]
 PROTECTION$Dir <- paste(PROTECTION$From,PROTECTION$To,sep="_")
 
 
 #--------------------------------------------------------
-#sankey diagram all states - viable protection
-#-------------------------------------------------------
+#sankey diagram CRB states - viable protection
+
 #percentage of state-specific protection
 #river miles viable protection for each connection from --> to
 P <- tapply(PROTECTION$OverallProtection_Len_m[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],sum)
@@ -207,9 +206,6 @@ inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
 outOfState <- outOfState*100/OeOut[match(sapply(strsplit(names(outOfState),"_"),'[',2),names(OeOut))]
 
 df <- data.frame(from=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',1)),to=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',2)),length_Protected = c(inState,outOfState))
-
-#reorder according to contribution
-#df <- df[order(df$length_Protected,decreasing=T),]
 
 #reorder both in and out using the same order
 ff <- ifelse(df$to==df$from,1,0)#identify in state connections
@@ -233,10 +229,8 @@ df$IDtarget <- match(df$to, nodes$name)-1
 df$group <- as.factor(gsub(" ","_",df$from))
 
 # prepare colour scale
-#Pstate = createPalette(7,  c("#332288", "#44AA99", "#661100","#FF9200","#FFCD73","#7BA246","#D37681"))
 Pstate <- c("#332288", "#44AA99", "#661100","#FF9200","#FFCD73","#7BA246","#D37681")
 
-#swatch(Pstate)
 colors <- paste(Pstate,collapse = '", "')
 ColourScal <- paste('d3.scaleOrdinal(["', colors, '"])')
 
@@ -272,52 +266,12 @@ sk1 <- htmlwidgets::onRender(
 )
 sk1
 
-# you save it as an html
+# save it as an html
 saveNetwork(sk1, "outputs/SankeyProtection_CRB.html")
 
-# you convert it as png
+# convert it as jpeg
 webshot("outputs/SankeyProtection_CRB.html","outputs/SankeyProtection_CRB.jpeg", vwidth = 1000, vheight = 700, zoom = 3)
 
-
-#---------------------------------------------------------------------
-#Using circle
-#---------------------------------------------------------------------
-P <- tapply(PROTECTION$OverallProtection_Len_m[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],sum)
-
-#Option 3: percentage of viable protection in-state versus out of state
-PROTECTION$INOUT <-  ifelse(PROTECTION$From == PROTECTION$To,"in","out")
-
-inState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
-outOfState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
-
-OeIn <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
-OeOut <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
-
-inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
-outOfState <- outOfState*100/OeOut[match(sapply(strsplit(names(outOfState),"_"),'[',2),names(OeOut))]
-
-df <- data.frame(from=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',1)),to=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',2)),length_Protected = c(inState,outOfState))
-
-# colors <- c(Col1 = "lightgrey", Col2 = "grey",
-#             Col3 = "darkgrey", Row1 = "#FF410D",
-#             Row2 = "#6EE2FF", Row3 = "#F7C530",
-#             Row4 = "#95CC5E", Row5 = "#D0DFE6")
-
-colors <- c("#332288", "#44AA99", "#661100","#FF9200","#FFCD73","#7BA246","#D37681")
-
-jpeg("outputs/Circlize_CRB.jpeg", units="in", width=8, height=8, res=300, pointsize = 19.5)
-par(xpd=NA)
-chordDiagram(df, grid.col = colors, annotationTrack = c("grid", "axis"), self.link = 2, directional = -1,
-             #direction.type = c("arrows", "diffHeight"),link.arr.type = "big.arrow",
-             preAllocateTracks = list(track.height = max(strwidth(unlist(length(unique(df$from)))))))
-# we go back to the first track and customize sector labels
-for(si in get.all.sector.index()) {
-  xlim = get.cell.meta.data("xlim", sector.index = si, track.index = 1)
-  ylim = get.cell.meta.data("ylim", sector.index = si, track.index = 1)
-  circos.text(mean(xlim), mean(ylim)+2, si, sector.index = si, track.index = 1, 
-              facing = "outside", niceFacing = T)
-}
-dev.off()
 
 #--------------------------------------------
 #Inset summary
@@ -327,11 +281,8 @@ df$to <- factor(df$to,levels=rev(levels(factor(df$to))))
 df$from <- factor(df$from,levels=rev(levels(factor(df$from))))
 
 tapply(df$length_Protected[df$INOUT=="out"],df$to[df$INOUT=="out"],sum)
-#Wyoming       Utah New Mexico     Nevada   Colorado California    Arizona 
-#13.30268   10.03854   16.49759   33.07041    7.84983   23.12900   25.51693 
+
 tapply(df$length_Protected[df$INOUT=="in"],df$to[df$INOUT=="in"],sum)
-#Wyoming       Utah New Mexico     Nevada   Colorado California    Arizona 
-#6.481836  24.826140   9.835914  33.003551  16.778367  47.252110  15.437666 
 
 state_plotOut <- acast(df[df$INOUT=="out",], to~from, value.var="length_Protected")
 state_plotOut <- ifelse(is.na(state_plotOut)==T,0,state_plotOut*-1)
@@ -350,98 +301,3 @@ par(xpd=NA)
 #text(apply(state_plot,1,sum)+1,b,colnames(t(state_plot)),srt=0,pos=4,hjust=0)
 axis(3,las=1,pos=8.5,cex.axis=1.2,at=c(-50,-25,0,25,50),labels=c(50,25,0,25,50))
 dev.off()
-
-#-----------------------------------------------------------------------
-#Sankey plot with only protected river miles (not %)
-#-----------------------------------------------------------------------
-#--------------------------------------------------------
-#sankey diagram all states - viable protection in river miles
-#-------------------------------------------------------
-#percentage of state-specific protection
-#river miles viable protection for each connection from --> to
-P <- tapply(PROTECTION$OverallProtection_Len_m[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],sum)
-
-#Option 3: percentage of viable protection in-state versus out of state
-PROTECTION$INOUT <-  ifelse(PROTECTION$From == PROTECTION$To,"in","out")
-
-inState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
-outOfState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
-
-# OeIn <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
-# OeOut <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
-# 
-# inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
-# outOfState <- outOfState*100/OeOut[match(sapply(strsplit(names(outOfState),"_"),'[',2),names(OeOut))]
-
-df <- data.frame(from=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',1)),to=c(names(inState),sapply(strsplit(names(outOfState),"_"),'[',2)),length_Protected = c(inState,outOfState))
-
-#reorder according to contribution
-#df <- df[order(df$length_Protected,decreasing=T),]
-
-#reorder both in and out using the same order
-ff <- ifelse(df$to==df$from,1,0)#identify in state connections
-
-le <- df$from[ff==1] #set levels
-df$from <- factor(df$from,levels=le)
-nff1 <- order(df$from[ff==1])
-nff2 <- order(df$from[ff==0])
-df <- rbind(df[ff==1,][nff1,],df[ff==0,][nff2,])
-
-#little trick to order the nodes
-df$to <- paste(df$to, " ")
-
-# From these flows we need to create a node data frame: it lists every entities involved in the flow
-nodes <- data.frame(name=c(as.character(df$from), as.character(df$to)) %>% unique())
-nodes$node_group <- gsub(" ","_", nodes$name) #spaces are not allowed
-
-# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
-df$IDsource <- match(df$from, nodes$name)-1 
-df$IDtarget <- match(df$to, nodes$name)-1
-df$group <- as.factor(gsub(" ","_",df$from))
-
-# prepare colour scale
-#Pstate = createPalette(7,  c("#332288", "#44AA99", "#661100","#FF9200","#FFCD73","#7BA246","#D37681"))
-Pstate <- c("#332288", "#44AA99", "#661100","#FF9200","#FFCD73","#7BA246","#D37681")
-
-#swatch(Pstate)
-colors <- paste(Pstate,collapse = '", "')
-ColourScal <- paste('d3.scaleOrdinal(["', colors, '"])')
-
-#ITERATIONS STOPS THE ALGORITHM FROM REORDERING
-sk1 <- sankeyNetwork(Links = df, Nodes = nodes,
-                     Source = "IDsource", Target = "IDtarget",
-                     Value = "length_Protected", NodeID = "name",NodeGroup = "node_group", 
-                     sinksRight=FALSE, nodeWidth=40, fontSize=24, nodePadding=2,LinkGroup="group",iterations = 0,colourScale=ColourScal) 
-sk1
-
-#push labels outside the plot
-sk1$x$nodes <-
-  sk1$x$nodes %>% 
-  mutate(is_source_node = name %in% df$from)
-
-sk1 <- htmlwidgets::onRender(
-  sk1,
-  '
-  function(el,x) {
-  d3.select(el)
-    .selectAll(".node text")
-    .filter(function(d) { return d.is_source_node; })
-    .attr("x", x.options.nodeWidth - 50)
-    .attr("text-anchor", "end");
-  
-  d3.select(el)
-    .selectAll(".node text")
-    .filter(function(d) { return !d.is_source_node; })
-    .attr("x", x.options.nodeWidth +5)
-    .attr("text-anchor", "start");
-  }
-  '
-)
-sk1
-
-# you save it as an html
-saveNetwork(sk1, "outputs/SankeyProtection_CRB_rivermiles.html")
-
-# you convert it as png
-webshot("outputs/SankeyProtection_CRB_rivermiles.html","outputs/SankeyProtection_CRB_rivermiles.jpeg", vwidth = 1000, vheight = 700, zoom = 3)
-
