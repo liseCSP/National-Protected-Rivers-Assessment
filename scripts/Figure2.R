@@ -5,6 +5,9 @@ library(sf); library(reshape2); library(stringr); library(dplyr); library(ggplot
 
 net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
 
+#-------------------------------------------------------
+#Import the data
+
 #data available at: https://doi.org/10.6084/m9.figshare.c.4233740
 #Add classification stream type
 cl <- list.files("data/US SCS/Size_Gradient/")
@@ -25,7 +28,6 @@ for(i in 2:length(cl)){
 }
 
 dat <- merge(dat,dat2,by="COMID")
-
 
 #Add Hydrology regime
 cl <- list.files("data/US SCS/Hydrology/")
@@ -52,7 +54,6 @@ net_s <- net_s[(net_s$FLOWDIR %in% c("With Digitized")),]
 EI <- read.csv("data/Contextualization_NPRA.csv")
 net_s <- data.frame(net_s,Elev = EI$MINELEVRAW[match(net_s$COMID_LC,EI$COMID_L)])
 
-
 #merge data
 net_s <- data.frame(net_s,dat[match(net_s$COMID,dat$COMID),])
 net_s <- net_s[,-which(names(net_s)%in% "COMID.1")]
@@ -67,24 +68,23 @@ head(net_s)
 #-------------------------------------------------------
 #Figure elevation
 
+#transform to m
 range(net_s$Elev,na.rm=T) #in cm
 net_s$Elev[net_s$Elev < -10] <- NA
 net_s$Elev <- net_s$Elev/100
-# net_s$Elev_c <- ifelse(net_s$Elev < 200,"0-200", #lowlands, hills, low, midaltitude, high, and very high mountains
-#                        ifelse(net_s$Elev >= 200 & net_s$Elev < 500,"200-500",
-#                               ifelse(net_s$Elev >= 500 & net_s$Elev < 1000,"500-1000",
-#                                      ifelse(net_s$Elev >= 1000 & net_s$Elev < 2000,"1000-2000","≥ 2000"))))
-net_s$Elev_c <- ifelse(net_s$Elev < 200,"Lowlands", #lowlands, hills, low, midaltitude, high, and very high mountains
+
+#assign classes
+net_s$Elev_c <- ifelse(net_s$Elev < 200,"Lowlands",
                        ifelse(net_s$Elev >= 200 & net_s$Elev < 500,"Hills",
                               ifelse(net_s$Elev >= 500 & net_s$Elev < 1000,"Mid-altitude",
                                      ifelse(net_s$Elev >= 1000 & net_s$Elev < 2000,"High mountains","Very high mountains"))))
 
 net_s$Elev_c <- factor(net_s$Elev_c,levels=c("Lowlands","Hills","Mid-altitude","High mountains","Very high mountains"))
 table(net_s$Elev_c)
-#with classes from 0 to 200 m, 200 to 500 m, 500 to 1000 m, and then every 1000 m
 
-table(net_s$Elev_c,useNA="ifany")*100/sum(table(net_s$Elev_c,useNA="ifany")) #less than 2% missing
+table(net_s$Elev_c,useNA="ifany")*100/sum(table(net_s$Elev_c,useNA="ifany"))
 
+#prepare dataset
 vari = rev(c("Class 4", "Class 3","Class 2","Class 1"))
 cols_bar <- (c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))
 F_stat_state <- aggregate(OverallProtection_Len_m ~ Elev_c + RIP_Class,sum,data=net_s[net_s$RIP_Class %in% c("Class 1","Class 2","Class 3","Class 4"),])
@@ -100,12 +100,13 @@ forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
 names(forPie) <- F_stat_stateT$Elev_c
 forPie <- forPie[rownames(state_plot)]
 
+#rename classes
 colnames(state_plot) <- gsub("Class 1","Comprehensive",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 2","Effective",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 3","Limited",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 4","Inadequate",colnames(state_plot))
 
-#assessing bias
+#assessing unbalances
 p_obs <- apply(state_plot[,c("Comprehensive","Effective","Limited","Inadequate")],1,sum)
 chisq.test(p_obs, p=forPie/100) #p-value < 2.2e-16
 
@@ -114,10 +115,10 @@ chisq.test(p_obs, p=forPie/100) #p-value < 2.2e-16
 
 state_plot <- state_plot[match(c("Lowlands","Hills","Mid-altitude","High mountains","Very high mountains"),rownames(state_plot)),]
 
-jpeg("outputs/Figure2Elev.jpeg", units="in", width=8, height=8, res=300, pointsize = 16)
+#figure
+jpeg("outputs/FigureElev.jpeg", units="in", width=8, height=8, res=300, pointsize = 16)
 
 par(mar=c(4, 0,0,1))
-#state_plot <- state_plot[order(apply(state_plot[,1:3],1,sum)),]
 b=barplot(t(state_plot),las=1,ylab="",cex.names=0.9,col=rev(cols_bar),xlim=c(-60,80),legend=F,cex.lab=1.4,las=2,axes=F,border=rev(cols_bar),names=rep(NA,length(rownames(state_plot))),horiz=T)#
 barplot(forPie*-1,col="white",border="black",horiz=T,add=T,las=2,names=rep(NA,length(rownames(state_plot))),axes=F)#
 
@@ -126,133 +127,14 @@ text(forPie*-1-2,b,rownames(state_plot),las=2,tck=0,srt=0,pos=2,xpd=TRUE,cex=1.1
 legend(bty="n","bottomright",col=rev(cols_bar),pch=15,(gsub("."," ",colnames(state_plot),fixed=T)),pt.cex=2.2,cex=1.1)
 mtext(side=1,"River length (%)",cex=1.4,line=2.8,adj=0.8)
 dev.off()
-# 
-# #------------------------------------------------------
-# #Figure characteristics network
-# #------------------------------------------------------
-# # library
-# library(tidyverse)
-# 
-# # Create dataset
-# #a <- table(net_s$StreamOrde)*100/sum(table(net_s$StreamOrde))
-# F_stat_stateT <- aggregate(Total_Length_m ~ StreamOrde,sum,data=net_s)
-# a <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# names(a) <- paste("Strahler",F_stat_stateT$StreamOrde)
-# 
-# #b <- table(net_s$Size_Class)*100/sum(table(net_s$Size_Class))
-# F_stat_stateT <- aggregate(Total_Length_m ~ Size_Class,sum,data=net_s)
-# b <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# names(b) <- F_stat_stateT$Size_Class
-# names(b) <- ifelse(names(b)=="HW","Headwater",
-#                    ifelse(names(b)=="SC","Small creek",
-#                           ifelse(names(b)=="LC","Large creek",
-#                                  ifelse(names(b)=="SR","Small river",
-#                                         ifelse(names(b)=="MR","Medium river",
-#                                                ifelse(names(b)=="MS","Mainstem",
-#                                                       ifelse(names(b)=="LR","Large river",
-#                                                              ifelse(names(b)=="GR","Great river",NA))))))))
-# b <- b[!is.na(names(b)==T)]
-# 
-# #c <- table(net_s$JulAug_Class)*100/sum(table(net_s$JulAug_Class))
-# F_stat_stateT <- aggregate(Total_Length_m ~ JulAug_Class,sum,data=net_s)
-# c <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# names(c) <- F_stat_stateT$JulAug_Class
-# 
-# #d <- table(net_s$g4)*100/sum(table(net_s$g4))
-# # F_stat_stateT <- aggregate(Total_Length_m ~ g4,sum,data=net_s)
-# # d <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# # names(d) <- F_stat_stateT$g4
-# # names(d) <- ifelse(names(d)=="1","Perennial",
-# #                    ifelse(names(d)=="2","Snowmelt",
-# #                           ifelse(names(d)=="3","Stable baseflow",
-# #                                  ifelse(names(d)=="4","Intermittent"
-# #                                         ,NA))))
-# 
-# F_stat_stateT <- aggregate(Total_Length_m ~ g8,sum,data=net_s)
-# d <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
-# names(d) <- F_stat_stateT$g8
-# 
-# data <- data.frame(individual = c(names(a),names(b),names(c),names(d)),
-#                    group=c(rep("Stream order",length(a)),rep("Size class",length(b)),rep("Temperature class",length(c)),rep("Hydrology class",length(d))),
-#                    value = c(a,b,c,d))
-# data$group <- factor(data$group)
-# 
-# # Set a number of 'empty bar' to add at the end of each group
-# empty_bar <- 2
-# to_add <- data.frame( matrix(NA, empty_bar*nlevels(data$group), ncol(data)) )
-# colnames(to_add) <- colnames(data)
-# to_add$group <- rep(levels(data$group), each=empty_bar)
-# data <- rbind(data, to_add)
-# data <- data %>% arrange(group)
-# data$id <- seq(1, nrow(data))
-# 
-# 
-# # Get the name and the y position of each label
-# label_data <- data
-# number_of_bar <- nrow(label_data)
-# angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
-# label_data$hjust <- ifelse( angle < -90, 1, 0)
-# label_data$angle <- ifelse(angle < -90, angle+180, angle)
-# 
-# # prepare a data frame for base lines
-# base_data <- data %>% 
-#   group_by(group) %>% 
-#   summarize(start=min(id), end=max(id) - empty_bar) %>% 
-#   rowwise() %>% 
-#   mutate(title=mean(c(start, end)))
-# 
-# # prepare a data frame for grid (scales)
-# grid_data <- base_data
-# grid_data$end <- grid_data$end[ c( nrow(grid_data), 1:nrow(grid_data)-1)] + 1
-# grid_data$start <- grid_data$start - 1
-# grid_data <- grid_data[-1,]
-# 
-# # Make the plot
-# p <- ggplot(data, aes(x=as.factor(id), y=value, fill=group)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
-#   
-#   geom_bar(aes(x=as.factor(id), y=value, fill=group), stat="identity", alpha=0.5) +
-#   
-#   # Add lines. I do it at the beginning to make sur barplots are OVER it.
-#   geom_segment(data=grid_data, aes(x = end, y = 50, xend = start, yend = 50), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
-#   geom_segment(data=grid_data, aes(x = end, y = 40, xend = start, yend = 40), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
-#   geom_segment(data=grid_data, aes(x = end, y = 30, xend = start, yend = 30), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
-#   geom_segment(data=grid_data, aes(x = end, y = 20, xend = start, yend = 20), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
-#   geom_segment(data=grid_data, aes(x = end, y = 10, xend = start, yend = 10), colour = "grey", alpha=1, size=0.3 , inherit.aes = FALSE ) +
-#   
-#   # Add text showing the value of each 100/75/50/25 lines
-#   annotate("text", x = rep(max(data$id),5), y = c(10, 20, 30, 40,50), label = c("10%", "20%", "30%", "40%", "50%") , color="grey", size=3 , angle=0, fontface="bold", hjust=1) +
-#   
-#   geom_bar(aes(x=as.factor(id), y=value, fill=group), stat="identity", alpha=0.5) +
-#   scale_fill_manual("legend", values = c("Hydrology class" = grey(0.8), "Size" = grey(0.5), "Stream order" = grey(0.2),"Temperature class" = "black")) +
-#   ylim(-40,70) +
-#   theme_minimal() +
-#   theme(
-#     legend.position = "none",
-#     axis.text = element_blank(),
-#     axis.title = element_blank(),
-#     panel.grid = element_blank(),
-#     plot.margin = unit(rep(-1,4), "cm") 
-#   ) +
-#   coord_polar() + 
-#   geom_text(data=label_data, aes(x=id, y=value+5, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=3.5, angle= label_data$angle, inherit.aes = FALSE ) +
-#   
-#   # Add base line information
-#   geom_segment(data=base_data, aes(x = start, y = -2, xend = end, yend = -2), colour = c(grey(0.8),grey(0.5),grey(0.2),"black"), alpha=0.8, size=0.6 , inherit.aes = FALSE )  #+
-# #geom_text(data=base_data, aes(x = title, y = -18, label=group), hjust=c(1,1,0,0), colour = "black", alpha=0.8, size=4, fontface="bold", inherit.aes = FALSE)
-# 
-# 
-# 
-# ggsave("outputs/NetworkCharactaristics.jpeg", plot=p,width=8, height=8)
-# 
-# 
-# #-----------------------------------------------------------------------
-# #Figure major basins
-# #----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#Figure major basins
+
+#get info HUC02
 net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
 net_protect_seg_fin$HUC_12 <- ifelse(sapply(strsplit(net_protect_seg_fin$HUC_12,"*"),length)==11,paste0("0",net_protect_seg_fin$HUC_12),net_protect_seg_fin$HUC_12)
-
 net_protect_seg_fin$Basin <- sapply(strsplit(as.character(net_protect_seg_fin$HUC_12),"*"),function(x) paste(x[1:2],collapse="",sep=""))
-
 net_protect_seg_fin$Basin <- ifelse(net_protect_seg_fin$Basin == "01","New England",
                                     ifelse(net_protect_seg_fin$Basin == "02","Mid-Atlantic",
                                            ifelse(net_protect_seg_fin$Basin == "03","S. Atlantic Gulf",
@@ -273,8 +155,9 @@ net_protect_seg_fin$Basin <- ifelse(net_protect_seg_fin$Basin == "01","New Engla
                                                                                                                                                     ifelse(net_protect_seg_fin$Basin == "18","California",
                                                                                                                                                            ifelse(net_protect_seg_fin$Basin == "19","Alaska",
                                                                                                                                                                   ifelse(net_protect_seg_fin$Basin == "20","Hawaii",NA))))))))))))))))))))
-table(net_protect_seg_fin$Basin ,useNA="ifany")*100/sum(table(net_protect_seg_fin$Basin,useNA="ifany"))#0.03% missing values
+table(net_protect_seg_fin$Basin ,useNA="ifany")*100/sum(table(net_protect_seg_fin$Basin,useNA="ifany"))
 
+#Prepare file
 vari = c("Class 4","Class 3","Class 2","Class 1")
 F_stat_state <- aggregate(OverallProtection_Len_m ~ Basin + RIP_Class,sum,data=net_protect_seg_fin)
 F_stat_stateT <- aggregate(Total_Length_m ~ Basin,sum,data=net_protect_seg_fin)
@@ -297,6 +180,7 @@ colnames(state_plot) <- gsub("Class 4","Inadequate",colnames(state_plot))
 forPie <- F_stat_stateT$Total_Length_m
 names(forPie) <- F_stat_stateT$Basin
 
+#Figures
 jpeg("outputs/PieBasins.jpeg", units="in", width=5, height=5, res=300, pointsize = 9)
 pie(forPie,col=gray.colors(nlevels(factor(net_protect_seg_fin$Basin))),init.angle=90,clockwise = T,border="white")
 dev.off()
@@ -309,9 +193,6 @@ state_plot <- state_plot[rev(1:nrow(state_plot)),]
 b=barplot(t(state_plot),las=1,ylab="",cex.names=0.9,col=rev(cols_bar),xlim=c(0,80),legend=F,cex.lab=1.4,las=2,axes=F,border=rev(cols_bar),names=rep(NA,length(rownames(state_plot))),horiz=T)#
 axis(1,pos=-0.1,las=1)
 text(rep(-2,length(b)),b,rownames(state_plot),las=2,tck=0,srt=0,pos=2,xpd=TRUE,cex=1.2)
-
-
-#legend(bty="n","topright",col=(cols_bar),pch=15,rev(colnames(state_plot)),pt.cex=2.2,cex=1.3)
 mtext(side=1,"River length (%)",cex=1.4,line=2)
 
 dev.off()
@@ -319,12 +200,15 @@ dev.off()
 
 #-----------------------------------------------------------------------
 #Figure ecoregions
-#----------------------------------------------------------------------
+
+#available at https://www.feow.org/
 feow <- st_read("data/HUC12_FEOW.dbf")
 
-net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
-net_protect_seg_fin$HUC_12 <- ifelse(sapply(strsplit(net_protect_seg_fin$HUC_12,"*"),length)==11,paste0("0",net_protect_seg_fin$HUC_12),net_protect_seg_fin$HUC_12)
+#add to table major habitat types
+net_protect_seg_fin$MHT_TXT <- feow$MHT_TXT[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
+table(net_protect_seg_fin$MHT_TXT,useNA="ifany")
 
+#add to table & rename ecoregions
 net_protect_seg_fin$ECOREGION <- feow$ECOREGION[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
 net_protect_seg_fin$ECOREGION <- gsub("Northeast","NE",net_protect_seg_fin$ECOREGION)
 net_protect_seg_fin$ECOREGION <- gsub("Southeast","SE",net_protect_seg_fin$ECOREGION)
@@ -332,18 +216,14 @@ net_protect_seg_fin$ECOREGION <- gsub("Northwest","NW",net_protect_seg_fin$ECORE
 net_protect_seg_fin$ECOREGION <- gsub("Northern","N",net_protect_seg_fin$ECOREGION)
 net_protect_seg_fin$ECOREGION <- gsub("Southern","S",net_protect_seg_fin$ECOREGION)
 
-net_protect_seg_fin$MHT_TXT <- feow$MHT_TXT[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
-table(net_protect_seg_fin$MHT_TXT,useNA="ifany")
-
 #add numbers
 feow$ECO_ID[is.na(feow$ECOREGION)] <- NA
 net_protect_seg_fin$ECO_ID <- feow$ECO_ID[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
-
 net_protect_seg_fin$ECOREGION <- factor(paste0(net_protect_seg_fin$ECOREGION," (",net_protect_seg_fin$ECO_ID,")"))
 
-table(net_protect_seg_fin$ECOREGION ,useNA="ifany")*100/sum(table(net_protect_seg_fin$ECOREGION,useNA="ifany"))#0.07% missing values
+table(net_protect_seg_fin$ECOREGION ,useNA="ifany")*100/sum(table(net_protect_seg_fin$ECOREGION,useNA="ifany"))#
 
-##--> there are 48 classes!!
+#Prepare table
 vari = c("Class 4","Class 3","Class 2","Class 1")
 F_stat_state <- aggregate(OverallProtection_Len_m ~ ECOREGION + RIP_Class,sum,data=net_protect_seg_fin)
 F_stat_stateT <- aggregate(Total_Length_m ~ ECOREGION,sum,data=net_protect_seg_fin)
@@ -364,29 +244,13 @@ names(forPie) <- F_stat_stateT$ECOREGION[order(apply(state_plot[,1:3],1,sum))]
 names(forPie) <- sapply(strsplit(as.character(names(forPie)),"(",fixed=T),'[',2)
 names(forPie) <- gsub(")","",names(forPie))
 
+#rename protection classes
 colnames(state_plot) <- gsub("Class.1","Comprehensive",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.2","Effective",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.3","Limited",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.4","Inadequate",colnames(state_plot))
 
-# jpeg("outputs/PieECOREGION.jpeg", units="in", width=5, height=5, res=300, pointsize = 9)
-# pie(forPie,col=gray.colors(nlevels(factor(net_protect_seg_fin$ECOREGION))),init.angle=150,clockwise = T,border="white")
-# dev.off()
-
-
-# jpeg("outputs/BarplotECOREGION.jpeg", units="in", width=9, height=8, res=300, pointsize = 16)
-# 
-# par(mar=c(4,12.5,0,1))
-# state_plot <- state_plot[order(apply(state_plot[,1:3],1,sum)),]
-# b=barplot(t(state_plot),las=1,ylab="",cex.names=0.9,col=rev(cols_bar),xlim=c(0,100),legend=F,cex.lab=1.4,las=2,axes=F,border=rev(cols_bar),names=rep(NA,length(rownames(state_plot))),horiz=T)#
-# axis(1,pos=-0.1,las=1)
-# text(rep(0,length(b)),b,rownames(state_plot),las=2,tck=0,srt=0,pos=2,xpd=TRUE,cex=0.7)
-# legend(bty="n","right",col=rev(cols_bar),pch=15,gsub("."," ",colnames(state_plot),fixed=T),pt.cex=2.2,cex=1.1)
-# mtext(side=1,"River length (%)",cex=1.4,line=2)
-# 
-# dev.off()
-
-
+#figure
 jpeg("outputs/BarplotECOREGION_v2.jpeg", units="in", width=10, height=8, res=300, pointsize = 16)
 
 forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
@@ -407,7 +271,7 @@ dev.off()
 
 
 #------------------------------------------------------------------------------------------
-#combined figure - Figure 2
+#combined figure - Representativity
 #-----------------------------------------------------------------------------------------
 
 # Create datasets
