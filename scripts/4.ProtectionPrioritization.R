@@ -10,12 +10,12 @@
 
 library(sf); library(tidyverse); library(spatialEco); library(naniar)
 
-huc12 <- st_read("data/NPRALayer_huc12_revised_2_28_25.gpkg")
+huc12 <- st_read("data/NPRALayer_huc12_revised_7_1_2025.gpkg")
 
 #summaries of the watersheds
 dim(huc12)
 sf_use_s2(FALSE)
-area <- st_area(huc12) #these are multipolygons
+area <- st_area(huc12) 
 Area <- tapply(area,huc12$HUC_12,sum)
 Area <- Area/1000000 #in km2
 length(Area)
@@ -37,41 +37,42 @@ huc12 <- huc12[!huc12$State%in% c("Alaska","Hawaii"),]
 #Estimate indicators of conservation value
 #biodiversity vs habitat intactness vs drinking water dependence
 
-#richness of imperiled species
 summary(huc12$TERich) #
 huc12$TERich[huc12$TERich==-999]<- NA
 huc12 <- huc12 %>%
   ungroup() %>% 
-  mutate(BioStateTot = percent_rank(TERich))
+  mutate(BioStateTot = percent_rank(replace(TERich,TERich==0,NA)))#richness of imperilled species
 
-hist(huc12$BioStateTot)
-
-#flow alteration
 summary(huc12$HAI)
 huc12$HAI[huc12$HAI==-999]<- NA
 huc12 <- huc12 %>%
   ungroup() %>% 
-  mutate(HydroStateTot = percent_rank(HAI))
+  mutate(HydroStateTot = percent_rank(replace(HAI,HAI==0,NA)))#hydrological alteration
 
-#human developement along rivers
 summary(huc12$gHM)
 huc12$gHM[huc12$gHM==-999]<- NA
 huc12 <- huc12 %>%
   ungroup() %>% 
-  mutate(GHMStateTot = percent_rank(gHM))
+  mutate(GHMStateTot = percent_rank(replace(gHM,gHM==0,NA)))#human footprint along rivers
 
-#index of lateral discconnection
-summary(huc12$IndexLateralC)
-huc12$IndexLateralC[huc12$IndexLateralC==-999]<- NA
+summary(huc12$LatConnect)
+huc12$LatConnect[huc12$LatConnect==-999]<- NA
 huc12 <- huc12 %>%
   ungroup() %>% 
-  mutate(LateralCStateTot = percent_rank(IndexLateralC))
+  mutate(LateralCStateTot = percent_rank(replace(LatConnect,LatConnect==0,NA)))#index of lateral connectivity
 
-#replace NA by zero (otherwise cannot compute aggregated index if no floodplain)
+#bring back zeros that were excluded from percentile computation
+huc12$LateralCStateTot[huc12$LatConnect==0] <- 0
+huc12$GHMStateTot[huc12$gHM==0] <- 0
+huc12$HydroStateTot[huc12$HAI==0] <- 0
+huc12$BioStateTot[huc12$TERich==0] <- 0
+
+#add zero otherwise cannot compute aggregated index if no floodplain
 huc12$LateralCStateTot <- ifelse(is.na(huc12$LateralCStateTot)==T,0,huc12$LateralCStateTot) 
 summary(huc12$LateralCStateTot)
 
-#fuzzy sum habitat intactness
+
+#fuzzy sum
 huc12$AltIndRaw <- apply(st_drop_geometry(huc12)[,c("HydroStateTot","GHMStateTot","LateralCStateTot")],1,fuzzySum)
 
 #visualization individual indicators
@@ -79,7 +80,7 @@ hist(huc12$HydroStateTot)
 hist(huc12$GHMStateTot)
 hist(huc12$LateralCStateTot)
 
-#retransform to percentile 
+#retransform in percentile (to take the top 25%)
 huc12 <- huc12 %>%
   mutate(AltIndTot = percent_rank(AltIndRaw))#
 hist(huc12$AltIndTot)
@@ -92,23 +93,34 @@ hist(huc12$HumanIntactStateTot)
 #drinking water importance
 huc12$PopDrinkWater <- huc12$IMP_R
 
-#transform to percentile (to take the top 25%)
+#transform in percentile (to take the top 25%)
+summary(huc12$PopDrinkWater)
+huc12$PopDrinkWater[huc12$PopDrinkWater==-999]<- NA
+
 huc12 <- huc12 %>%
   ungroup() %>% 
-    mutate(PopDrinkTot = percent_rank(PopDrinkWater))#
+  mutate(PopDrinkTot = percent_rank(replace(PopDrinkWater,PopDrinkWater==0,NA)))#
+huc12$PopDrinkTot[huc12$PopDrinkWater==0] <- 0
 
 hist(huc12$PopDrinkTot)
 
+#target for upstream protection
+#-------------------------------------------------------------
+#watersheds that do not meet the 30% protection threshold
+huc12$Viable[huc12$Viable==-999]<- NA
+huc12$NoViableLocal <- ifelse(huc12$Viable < 30,1,0)
+
+#watersheds that meet the 30% upstream protection
+huc12$ViableUpstream[huc12$ViableUpstream==-999]<- NA
+huc12$ViableUpstreamY <- ifelse(huc12$ViableUpstream >= 30,1,0)
+
+#watersheds that show higher upstream than local protection
+huc12$UvL <- ifelse(huc12$ViableUpstream > huc12$Viable,1,0)
+huc12$UvL[is.na(huc12$UvL)] <- 0 #add 0 for isolated or headwater basins
 
 #identify source watersheds
 #data available for download at https://www.epa.gov/waterdata/nhdplus-national-data
 ref <- st_read('data/NHDPlusNationalData/NationalWBDSnapshot.gdb','WBDSnapshot_National')
-#The hydrologic unit type that most closely identifies the watershed.          
-# S - "Standard" hydrologic unit - Any land HU with drainage flowing to a single outlet point, excluding non-contributing areas. This includes areas or small triangular wedges between adjacent HU's that remain after classic hydrologic units are delineated.  Some examples include "true", "classic", "composite", and "remnant" hydrologic units.       
-# C - "Closed Basin" hydrologic unit - A drainage area that is 100% non-contributing. This means all surface flow is internal, no overland flow leaves the hydrologic unit through the outlet point.       
-# F - "Frontal" hydrologic unit - Areas along the coastline of lakes, oceans, bays, etc. that have more than one outlet.  These HU's are predominantly land with some water areas at or near the outlet(s).       
-# M - “Multiple Outlet” hydrologic unit An area that has more than one natural outlet; for example, an outlet located on a stream with multiple channels. This does not include frontal or water hydrologic units, hydrologic units with artificial interbasin transfers, drainage outlets through karst or ground-water flow, or outlets that cross a stream with an island. This code should be used only in rare instances.        
-# W - "Water" hydrologic unit - Hydrologic units that are predominantly water with adjacent land areas, ex. lake, estuaries, and harbors. 
 sources <- ref$HUC_12[which(ref$HU_12_TYPE == "S")] 
 sources <- sources[! sources %in% c(ref$HU_12_DS)]
 huc12$Source <- ifelse(huc12$HUC_12 %in% sources,"Y","N")
@@ -118,19 +130,13 @@ huc12$Source <- ifelse(huc12$HUC_12 %in% sources,"Y","N")
 
 #25% lowest alteration
 huc12$HuIntacTop25Tot <- ifelse(huc12$HumanIntactStateTot >= 0.75,1,0)
-huc12$HuIntacTop25 <- ifelse(huc12$HumanIntactState  >= 0.75,1,0)
 
 #25% highest biodiv
-huc12$BioIndTop25 <- ifelse(huc12$BiodState >= 0.75,1,0)
 huc12$BioIndTop25Tot <- ifelse(huc12$BioStateTot >= 0.75,1,0)
 
-#25% highest upstream protection
-huc12$TopUpstream <- ifelse(huc12$UpPercState >= 0.75,1,0)
-huc12$TopUpstreamTot <- ifelse(huc12$UpPercTot >= 0.75,1,0)
-
 #25% highest drinking water
-huc12$DrinkTop25 <- ifelse(huc12$PopDrinkState >= 0.75,1,0)
 huc12$DrinkTop25Tot <- ifelse(huc12$PopDrinkTot >= 0.75,1,0)
+
 
 #estimate priority watersheds
 huc12$priorityTot <- 0
@@ -142,13 +148,13 @@ table(huc12$priorityTot)[2]*100/sum(table(huc12$priorityTot))
 
 #fill in NAs
 huc12 <- huc12[,!names(huc12) %in% c("Join_Count","Target_FID","total_mi","rightmost.closed","Satisfactory")]
-huc12$LateralCStateTot[is.na(huc12$IndexLateralC)] <- NA #it was just to aggregate values
+huc12$LateralCStateTot[is.na(huc12$LatConnect)] <- NA #it was just to aggregate values but values should be NA
 
 #save file
 st_write(huc12, "outputs/RIP_huc12_prioritization.gpkg",append=FALSE)  
 
 #--------------------------------------------------------------
-#Estimate statistics & summarize protection
+#Overlap among indicators
 
 library(ggplot2);library(introdataviz); library(sf)
 
@@ -162,11 +168,9 @@ huc12_p <- huc12_p[!is.na(huc12_p$DrinkTop25Tot) == T,]
 dim(huc12_p)
 N <- dim(huc12_p)[1]
 
-#------------------------------------------
-#How many priority watersheds?
-sum(huc12_p$priorityTot)#
-sum(huc12_p$priorityTot)*100/nrow(huc12_p)
-table(huc12_p$priorityTot,huc12_p$State) 
+#--------------------------------------------------
+#--- Figures
+#--------------------------------------------------
 
 #-----------------------------------------------------
 #Venn diagram
@@ -175,13 +179,7 @@ require(VennDiagram)
 
 #A = Human intactness
 #B = Biodiversity value
-#C = Protection need
-
-draw.triple.venn(area1 = table(huc12_p$HuIntacTop25Tot)[2], area2 = table(huc12_p$BioIndTop25Tot)[2], area3 = table(huc12_p$DrinkTop25Tot)[2],
-n12 = table(huc12_p$HuIntacTop25Tot,huc12_p$BioIndTop25Tot)[2,2],
-n23 = table(huc12_p$BioIndTop25Tot,huc12_p$DrinkTop25Tot)[2,2],
-n13 = table(huc12_p$HuIntacTop25Tot,huc12_p$DrinkTop25Tot)[2,2],
-n123 = table(huc12_p$priorityTotW)[2],euler.d=T,scale=T, sep.dist = 0.1, rotation.degree = 30,fill=c("#A80084","#00A9E6","#E69800"))
+#C = Drinking water importance
 
 jpeg("outputs/FigVenn.jpeg", units="in", width=3, height=3, res=300, pointsize = 16)
 
@@ -237,7 +235,7 @@ local <- ifelse(huc12_p$Viable <30,"alow","high")
 upstream <- ifelse(huc12_p$ViableUpstream <30,"alow","high")
 
 lu <- table(upstream,local)
-N2 <- sum(lu) #42075
+N2 <- sum(lu) 
 lu <- round(lu*100/sum(lu),1)
 
 x1 <- c(lu[2,2],lu[2,1],lu[1,1],lu[1,2])
@@ -253,9 +251,8 @@ color_set1 <- c("#593FB3", "#62E7F5","#F2F2F2", "#FF7373")
 color_set2 <- c("#0070FF","#FFFFBE","transparent", "transparent")
 
 # Call the function with different datasets and color sets
-#four_quadrant_facet(list(x1, x2), list(color_set1, color_set2))
 p1 <- four_quadrant_facet(list(x1), list(color_set1))
-ggsave("outputs/ProportionsLocalvsUpstream.pdf", plot=p1,width=11, height=4,dpi = 300)
+ggsave("outputs/ProportionsLocalvsUpstream.pdf", plot=p1,width=11, height=4,dpi = 300) #to assemble later
 
 p2 <- four_quadrant_facet(list(x2), list(color_set2))
 ggsave("outputs/ProportionsLocalSource.pdf", plot=p2,width=11, height=2,dpi = 300)
@@ -288,50 +285,98 @@ dev.off()
 
 #------------------------------------------------------------
 #Summary statistics
+
+local <- ifelse(huc12_p$Viable <30,"alow","high")
+upstream <- ifelse(huc12_p$ViableUpstream <30,"alow","high")
+
+lu <- table(upstream,local)
+N2 <- sum(lu) #42075
+lu <- round(lu*100/sum(lu),1)
+
+x1 <- c(lu[2,2],lu[2,1],lu[1,1],lu[1,2])
+
+sl <- table(local[is.na(upstream)==T])
+N1 <- sum(sl) #40721
+sl <- round(sl*100/sum(sl),1)
+
+#remove missing values (mostly lake watersheds)
+huc12_p <- huc12_p[!is.na(huc12_p$BioIndTop25Tot) == T,]
+huc12_p <- huc12_p[!is.na(huc12_p$HuIntacTop25Tot) == T,]
+huc12_p <- huc12_p[!is.na(huc12_p$DrinkTop25Tot) == T,]
+
+
+#estimate protection for both source and non-source watersheds
 standL <- ifelse(huc12_p$Viable >= 30, "high","low")
 standU <- ifelse(huc12_p$ViableUpstream >= 30, "high","#low")
-standTot <- ifelse(standL == "high" & standU == "high","H","N")
+standTot <- ifelse(standL == "high" & standU == "high","H","N") #non-source watersheds
 standTot[is.na(huc12_p$ViableUpstream)==T] <- NA
-standS <- ifelse(standL == "high" & is.na(huc12_p$ViableUpstream)==T,"H","N")
+standS <- ifelse(standL == "high" & is.na(huc12_p$ViableUpstream)==T,"H","N") #source watersheds
+standS[is.na(huc12_p$ViableUpstream)==F] <- NA
 
 #drinking water
 a1 <- table(huc12_p$DrinkTop25Tot,standTot)
 a2 <- table(huc12_p$DrinkTop25Tot,standS)
 
+#local protection
 aa <- table(huc12_p$DrinkTop25Tot,standL)
-aa[2,1]*100/sum(aa[2,])
+aa[2,1]*100/sum(aa[2,]) #13.21354
 
-#adequatly protected watersheds
-(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,])
-
+#both local and upstream protection
+(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,]) #8.709194
 
 #biodiversity
 a1 <- table(huc12_p$BioIndTop25Tot,standTot)
 a2 <- table(huc12_p$BioIndTop25Tot,standS)
 
 aa <- table(huc12_p$BioIndTop25Tot,standL)
-aa[2,1]*100/sum(aa[2,])
+aa[2,1]*100/sum(aa[2,]) #24.53326
 
-#adequatly protected watersheds
-(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,])
+#both local and upstream protection
+(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,]) #15.33
 
-#human intactdness
+#human intacdness
 a1 <- table(huc12_p$HuIntacTop25Tot,standTot)
 a2 <- table(huc12_p$HuIntacTop25Tot,standS)
 
 aa <- table(huc12_p$HuIntacTop25Tot,standL)
-aa[2,1]*100/sum(aa[2,])
+aa[2,1]*100/sum(aa[2,]) #27.27092
 
-#adequatly protected watersheds
-(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,])
+#both local and upstream protection
+(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,]) #24.38066
 
 
 #Total
+
+#How many priority watersheds?
+sum(huc12_p$priorityTot)#347
+sum(huc12_p$priorityTot)*100/nrow(huc12_p)#0.4355412
+table(huc12_p$priorityTot,huc12_p$State) 
+
 a1 <- table(huc12_p$priorityTot,standTot)
 a2 <- table(huc12_p$priorityTot,standS)
 
+#how many are already protected? [0 is protection]
 aa <- table(huc12_p$priorityTot,standL)
-aa[2,1]*100/sum(aa[2,])
+aa[2,1]*100/sum(aa[2,]) #47.83862
 
-(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,])
+(a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,]) #40.05764
 
+
+#count of watershed independently for each indicator
+table(huc12_p$DrinkTop25Tot,huc12_p$NoViableLocal)#[0 is protection]
+#     0     1
+#0  9387   53589
+#1  2206   14489
+2206 *100/(2206 +14489)#13.21354
+
+table(huc12_p$BioIndTop25Tot,huc12_p$NoViableLocal)#[0 is protection]
+#     0     1
+#0  8794  59468
+#1  2799  8610
+2799*100/(2799+8610)#24.53326
+
+table(huc12_p$HuIntacTop25Tot,huc12_p$NoViableLocal)#[0 is protection]
+#     0     1
+#0  6111   53458
+#1  5482  14620
+5482*100/(5482+14620)#27.27092
