@@ -12,7 +12,7 @@
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data ----
-net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv")
+net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
 
 # pad with zeros and drop missing HUC12
 net_protect_seg_fin <- net_protect_seg_fin %>%
@@ -142,7 +142,7 @@ write.csv(PROTECTION,"outputs/Protection_states_InOut_huc12.csv", row.names = FA
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data & select viable protection only ----
-net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv") %>%
+net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv") %>%
   filter(RIP_Class %in% c("Class 1","Class 2","Class 3"))
 
 # ---- Assign protection types by hand or use management type from PAD-US (already extracted) ----
@@ -306,7 +306,7 @@ write.csv(PROTECTION,"outputs/Management_states_InOut_huc12.csv")
 library(reshape2); library(tidyverse); library(ggplot2); library(vcd)
 
 #get viable protection (in %)
-PROTECTION <- read.csv("outputs/Protection_states_InOut_huc12.csv")
+PROTECTION <- read.csv("data/Protection_states_InOut_huc12.csv")
 
 #Format data
 names(PROTECTION)[names(PROTECTION)=="IN"] <- "To"
@@ -326,7 +326,7 @@ outOfState <- outOfState*100/OeOut[match(names(outOfState),names(OeOut))]
 pp <- data.frame(Protection = c(-inState,outOfState),State = c(names(inState),names(outOfState)),Status=c(rep("In-State",length(inState)),rep("Out-State",length(outOfState))))
 
 #get protection type
-MANAG <- read.csv("outputs/Management_states_InOut_huc12.csv")
+MANAG <- read.csv("data/Management_states_InOut_huc12.csv")
 
 #reduce number of categories
 MANAG$Mng_Typ <- ifelse(MANAG$Mng_Typ %in% c("Joint","Regional Agency Special District","Unknown","American Indian Lands"),"Other",MANAG$Mng_Typ)

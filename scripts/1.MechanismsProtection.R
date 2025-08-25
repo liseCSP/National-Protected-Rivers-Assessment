@@ -9,7 +9,7 @@
 
 #-------------------------------------------------
 #Summary protection by PRI classes
-net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv")
+net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
 
 L_P <- tapply(net_protect_seg_fin$OverallProtection_Len_m,
               factor(net_protect_seg_fin$RIP_Class,levels=c("Unprotected","Class 4","Class 3","Class 2","Class 1")),sum,na.rm=T)
@@ -70,7 +70,7 @@ library(sf); library(data.table); library(MESS); library(dplyr)
 
 
 #segment-level data
-net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv")
+net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
 
 #pad HUC12 with zeros
 net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
@@ -373,13 +373,13 @@ write.csv(summ_all,"outputs/SummaryIndividualProtectionMechanism.csv")
 #convert to percentages, except protected length (converted in miles) and PRI (2 digits for length and PRI and one digit percentages)
 #add metadata for visualization purposes: name, COMID v2.1, stream order and floodplain extent (for Alaska)
 #transform percentage for protection classes to binary protected vs not
-# st_write(net, "data/NPRALayer_segment.gpkg",append=FALSE) 
+# st_write(net, "data/NPRALayer_segment_download.gpkg",append=FALSE) 
 
 
 #-------------------------------------------
 #Network of mechanisms
 library(sf); library(reshape2)
-net <- st_read("data/NPRALayer_segment.gpkg")
+net <- st_read("data/NPRALayer_segment_download.gpkg")
 net <- st_drop_geometry(net)
 
 net$PRI_Class <- ifelse(net$PRI ==0,"Unprotected",ifelse(net$PRI <= 1.25, "Class 4",
@@ -495,7 +495,7 @@ dev.off()
 #Estimate number of mechanisms per segment
 library(sf); library(reshape2)
 
-net <- st_read("data/NPRALayer_segment.gpkg")
+net <- st_read("data/NPRALayer_segment_download.gpkg")
 net <- st_drop_geometry(net)
 pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net)))
 mat <- net[,pick]

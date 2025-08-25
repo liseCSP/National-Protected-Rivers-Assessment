@@ -10,7 +10,7 @@
 
 library(sf); library(tidyverse); library(spatialEco); library(naniar)
 
-huc12 <- st_read("data/NPRALayer_huc12_revised_7_1_2025.gpkg")
+huc12 <- st_read("data/NPRALayer_huc12_download.gpkg")
 
 #summaries of the watersheds
 dim(huc12)
