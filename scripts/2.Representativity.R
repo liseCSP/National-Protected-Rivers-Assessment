@@ -47,25 +47,25 @@ for(i in 2:length(cl)){
 
 dat <- data.frame(dat,dat4[match(dat$COMID,dat4$COMID),])
 
-#keep only CONUS
+#Keep only CONUS
 net_s <- net_protect_seg_fin[!(net_protect_seg_fin$State %in% c("Alaska","Hawaii")),]
 net_s <- net_s[!(is.na(net_s$State)),]
 dim(net_s)
 
-#keep only digitized flow
+#Keep only digitized flow
 table(net_s$FLOWDIR[!net_s$COMID %in% dat$COMID],useNA="ifany")
 net_s <- net_s[(net_s$FLOWDIR %in% c("With Digitized")),] 
 
-#add elevation
+#Add elevation
 #MINELEVRAW from NHDPlusV2.1 (https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data)
 EI <- read.csv("data/Contextualization_NPRA.csv")
 net_s <- data.frame(net_s,Elev = EI$MINELEVRAW[match(net_s$COMID_LC,EI$COMID_L)])
 
-#merge data
+#Merge data
 net_s <- data.frame(net_s,dat[match(net_s$COMID,dat$COMID),])
 net_s <- net_s[,-which(names(net_s)%in% "COMID.1")]
 
-#remove missing data
+#Remove missing data
 net_s[which(is.na(net_s$Size_Class)),]
 net_s <- net_s[!is.na(net_s$Size_Class),]
 dim(net_s) 
@@ -75,12 +75,12 @@ head(net_s)
 #-------------------------------------------------------
 #Figure elevation
 
-#transform to m
+#Transform to m
 range(net_s$Elev,na.rm=T) #in cm
 net_s$Elev[net_s$Elev < -10] <- NA
 net_s$Elev <- net_s$Elev/100
 
-#assign classes
+#Assign classes
 net_s$Elev_c <- ifelse(net_s$Elev < 200,"Lowlands",
                        ifelse(net_s$Elev >= 200 & net_s$Elev < 500,"Hills",
                               ifelse(net_s$Elev >= 500 & net_s$Elev < 1000,"Mid-altitude",
@@ -91,7 +91,7 @@ table(net_s$Elev_c)
 
 table(net_s$Elev_c,useNA="ifany")*100/sum(table(net_s$Elev_c,useNA="ifany"))
 
-#prepare dataset
+#Prepare dataset
 vari = rev(c("Class 4", "Class 3","Class 2","Class 1"))
 cols_bar <- (c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))
 F_stat_state <- aggregate(OverallProtection_Len_m ~ Elev_c + RIP_Class,sum,data=net_s[net_s$RIP_Class %in% c("Class 1","Class 2","Class 3","Class 4"),])
@@ -107,13 +107,13 @@ forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
 names(forPie) <- F_stat_stateT$Elev_c
 forPie <- forPie[rownames(state_plot)]
 
-#rename classes
+#Rename classes
 colnames(state_plot) <- gsub("Class 1","Comprehensive",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 2","Effective",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 3","Limited",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 4","Inadequate",colnames(state_plot))
 
-#assessing unbalances
+#Assessing unbalances
 p_obs <- apply(state_plot[,c("Comprehensive","Effective","Limited","Inadequate")],1,sum)
 chisq.test(p_obs, p=forPie/100) #p-value < 2.2e-16
 
@@ -122,7 +122,7 @@ chisq.test(p_obs, p=forPie/100) #p-value < 2.2e-16
 
 state_plot <- state_plot[match(c("Lowlands","Hills","Mid-altitude","High mountains","Very high mountains"),rownames(state_plot)),]
 
-#figure
+#Figure
 jpeg("outputs/FigureElev.jpeg", units="in", width=8, height=8, res=300, pointsize = 16)
 
 par(mar=c(4, 0,0,1))
@@ -138,7 +138,7 @@ dev.off()
 #-----------------------------------------------------------------------
 #Figure major basins
 
-#get info HUC02
+#Get info HUC02
 net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
 net_protect_seg_fin$HUC_12 <- ifelse(sapply(strsplit(net_protect_seg_fin$HUC_12,"*"),length)==11,paste0("0",net_protect_seg_fin$HUC_12),net_protect_seg_fin$HUC_12)
 net_protect_seg_fin$Basin <- sapply(strsplit(as.character(net_protect_seg_fin$HUC_12),"*"),function(x) paste(x[1:2],collapse="",sep=""))
@@ -187,12 +187,12 @@ colnames(state_plot) <- gsub("Class 4","Inadequate",colnames(state_plot))
 forPie <- F_stat_stateT$Total_Length_m
 names(forPie) <- F_stat_stateT$Basin
 
-#Figures
+#Piechart
 jpeg("outputs/PieBasins.jpeg", units="in", width=5, height=5, res=300, pointsize = 9)
 pie(forPie,col=gray.colors(nlevels(factor(net_protect_seg_fin$Basin))),init.angle=90,clockwise = T,border="white")
 dev.off()
 
-
+#Barplot
 jpeg("outputs/BarplotBasins.jpeg", units="in", width=8, height=8, res=300, pointsize = 16)
 
 par(mar=c(4,12.5,1,1))
@@ -211,11 +211,11 @@ dev.off()
 #available at https://www.feow.org/
 feow <- st_read("data/HUC12_FEOW.dbf")
 
-#add to table major habitat types
+#Add to table major habitat types
 net_protect_seg_fin$MHT_TXT <- feow$MHT_TXT[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
 table(net_protect_seg_fin$MHT_TXT,useNA="ifany")
 
-#add to table & rename ecoregions
+#Add to table & rename ecoregions
 net_protect_seg_fin$ECOREGION <- feow$ECOREGION[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
 net_protect_seg_fin$ECOREGION <- gsub("Northeast","NE",net_protect_seg_fin$ECOREGION)
 net_protect_seg_fin$ECOREGION <- gsub("Southeast","SE",net_protect_seg_fin$ECOREGION)
@@ -223,7 +223,7 @@ net_protect_seg_fin$ECOREGION <- gsub("Northwest","NW",net_protect_seg_fin$ECORE
 net_protect_seg_fin$ECOREGION <- gsub("Northern","N",net_protect_seg_fin$ECOREGION)
 net_protect_seg_fin$ECOREGION <- gsub("Southern","S",net_protect_seg_fin$ECOREGION)
 
-#add numbers
+#Add numbers
 feow$ECO_ID[is.na(feow$ECOREGION)] <- NA
 net_protect_seg_fin$ECO_ID <- feow$ECO_ID[match(net_protect_seg_fin$HUC_12,feow$HUC_12)]
 net_protect_seg_fin$ECOREGION <- factor(paste0(net_protect_seg_fin$ECOREGION," (",net_protect_seg_fin$ECO_ID,")"))
@@ -251,13 +251,13 @@ names(forPie) <- F_stat_stateT$ECOREGION[order(apply(state_plot[,1:3],1,sum))]
 names(forPie) <- sapply(strsplit(as.character(names(forPie)),"(",fixed=T),'[',2)
 names(forPie) <- gsub(")","",names(forPie))
 
-#rename protection classes
+#Rename protection classes
 colnames(state_plot) <- gsub("Class.1","Comprehensive",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.2","Effective",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.3","Limited",colnames(state_plot))
 colnames(state_plot) <- gsub("Class.4","Inadequate",colnames(state_plot))
 
-#figure
+#Figure
 jpeg("outputs/BarplotECOREGION_v2.jpeg", units="in", width=10, height=8, res=300, pointsize = 16)
 
 forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
@@ -278,15 +278,11 @@ dev.off()
 
 
 #------------------------------------------------------------------------------------------
-#combined figure - Representative
-#-----------------------------------------------------------------------------------------
+#combined figure - Representativity [Figure 2]
 
-#-------------------------------------------------------
-#protection
-#------------------------------------------------------
 net_s$RIP_Class <- factor(net_s$RIP_Class,levels=c("Unprotected","Class 4","Class 3","Class 2","Class 1"))
 
-#major habitat types
+#Major habitat types
 F_stat_state1 <- aggregate(OverallProtection_Len_m ~ MHT_TXT + RIP_Class,sum,data=net_protect_seg_fin,drop=F)
 F_stat_stateT <- aggregate(Total_Length_m ~ MHT_TXT,sum,data=net_protect_seg_fin,drop=F)
 F_stat_state1$OverallProtection_Len_m <- F_stat_state1$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state1$MHT_TXT,F_stat_stateT$MHT_TXT)]
@@ -392,20 +388,20 @@ label_data$angle <- ifelse(angle < -90, angle+180, angle)
 label_data$angle[angle==-90] <- 90 #small adjustement to avoid inverted label
 label_data$hjust[angle==-90] <- 1 #small adjustement to avoid inverted label
 
-# prepare a data frame for base lines
+# Prepare a data frame for base lines
 base_data <- data %>% 
   group_by(group) %>% 
   summarize(start=min(id), end=max(id) - empty_bar) %>% 
   rowwise() %>% 
   mutate(title=mean(c(start, end)))
 
-# prepare a data frame for grid (scales)
+# Prepare a data frame for grid (scales)
 grid_data <- base_data
 grid_data$end <- grid_data$end[ c( nrow(grid_data), 1:nrow(grid_data)-1)] + 1
 grid_data$start <- grid_data$start - 1
 grid_data <- grid_data[-1,]
 
-#change labels
+#Change labels
 data$observation <- as.character(data$observation)
 data$observation[which(data$observation=="Class 1")] <- "Comprehensive"
 data$observation[which(data$observation=="Class 2")] <- "Effective"
@@ -419,7 +415,7 @@ label_data$individual[label_data$individual == "tropical and subtropical coastal
 label_data$individual[label_data$individual == "xeric freshwaters and endorheic (closed) basins"] <- "xeric freshwaters and
 endorheic (closed) basins"
 
-#format labels
+#Format labels
 label_data$individual <- Hmisc::capitalize(label_data$individual)
 
 # Make the plot  
@@ -468,27 +464,23 @@ ggsave("outputs/Figurerepresentativity.jpeg", plot=p,width=8, height=8)
 #------------------------------------------------------------------
 #Assessing unbalances
 
-#hydrology type
+#Hydrology type
 p_obs <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Representation"),])
-
 chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
 
-#ecoregion (is in fact basin)
+#River basin
 p_obs <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Representation"),])
-
 chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
 
 #size class
 p_obs <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Representation"),])
-
 chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
 
-#temperature class
+#Temperature class
 p_obs <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Representation"),])
-
 chisq.test(p_obs$value, p=p_tot$value/100) #p-value = 0.02623
 

@@ -7,238 +7,6 @@
 
 #Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
 
-#----------------- 
-#Summary protection by mechanisms
-library(dplyr); library(plotrix)
-
-net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv") 
-
-#summarizing protection for different individual mechanisms of protection
-onrw_mi <- sum(as.vector(net_protect_seg_fin$ONRW_Len_m),na.rm=T)
-nws_mi <- sum(as.vector(net_protect_seg_fin$NWS_Len_m),na.rm=T)
-sws_mi <- sum(as.vector(net_protect_seg_fin$SWS_Len_m),na.rm=T)
-eli_mi <- sum(as.vector(net_protect_seg_fin$NWS_Eli_Len_m),na.rm=T)
-otrw_mi <- sum(as.vector(net_protect_seg_fin$OTRW_Len_m),na.rm=T)
-onrw_mi <- onrw_mi+ otrw_mi
-
-scenicO_mi <- sum(as.vector(net_protect_seg_fin$FPA_Len_m),na.rm=T)
-rfpa_mi <- sum(as.vector(net_protect_seg_fin$RFPA_Len_m),na.rm=T)
-wpa_mi <- sum(as.vector(net_protect_seg_fin$WPA_Len_m),na.rm=T)
-fam_mi <- sum(as.vector(net_protect_seg_fin$FAM_Len_m),na.rm=T)
-
-iucn1_mi <- sum(as.vector(net_protect_seg_fin$IUCNI_Len_m),na.rm=T)
-iucn2_mi <- sum(as.vector(net_protect_seg_fin$IUCNII_Len_m),na.rm=T)
-iucn3_mi <- sum(as.vector(net_protect_seg_fin$IUCNIII_Len_m),na.rm=T)
-iucn4_mi <- sum(as.vector(net_protect_seg_fin$IUCNIV_Len_m),na.rm=T)
-iucn5_mi <- sum(as.vector(net_protect_seg_fin$IUCNV_Len_m),na.rm=T)
-iucn6_mi <- sum(as.vector(net_protect_seg_fin$IUCNVI_Len_m),na.rm=T)
-iucn_mi <- iucn3_mi+iucn4_mi+iucn5_mi+iucn6_mi
-iucnStrict_mi <- iucn1_mi+iucn2_mi
-
-iucn <- data.frame(IUCN_Len_m = c(net_protect_seg_fin$IUCNI_Len_m,net_protect_seg_fin$IUCNII_Len_m,net_protect_seg_fin$IUCNIII_Len_m,net_protect_seg_fin$IUCNIV_Len_m,
-                                  net_protect_seg_fin$IUCNV_Len_m,net_protect_seg_fin$IUCNVI_Len_m),
-                   IUCN_Des_Tp = c(net_protect_seg_fin$IUCNI_Des_Tp,net_protect_seg_fin$IUCNII_Des_Tp,net_protect_seg_fin$IUCNIII_Des_Tp,net_protect_seg_fin$IUCNIV_Des_Tp,
-                                   net_protect_seg_fin$IUCNV_Des_Tp,net_protect_seg_fin$IUCNVI_Des_Tp))
-IS_mi <- tapply(iucn$IUCN_Len_m[iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],iucn$IUCN_Des_Tp[iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],sum)
-IP_mi <- tapply(iucn$IUCN_Len_m[!iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],iucn$IUCN_Des_Tp[!iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],sum)
-names(IP_mi)[IP_mi < (100000/0.621371)] <- "Other" #other if less than 100 miles
-
-critic_mi <- sum(as.vector(net_protect_seg_fin$CritHabESA_Len_m),na.rm=T)
-
-buff_mi <- sum(as.vector(net_protect_seg_fin$BufferRiparian_Len_m),na.rm=T)
-
-gap3strict_mi <- sum(as.vector(net_protect_seg_fin$Gap3_Len_m[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")]))
-gap3_mi <- sum(as.vector(net_protect_seg_fin$Gap3_Len_m[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")]))
-MUS_mi <- tapply(net_protect_seg_fin$Gap3_Len_m[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],net_protect_seg_fin$Gap3_Des_Tp[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],sum)
-MU_mi <- tapply(net_protect_seg_fin$Gap3_Len_m[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],net_protect_seg_fin$Gap3_Des_Tp[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],sum)
-
-#add other conservation areas and UA
-OTH_mi <- tapply(net_protect_seg_fin$IUCNOTH_Len_m,net_protect_seg_fin$IUCNOTH_Des_Tp,sum,na.rm=T)
-MU_mi <- c(MU_mi,OTH_mi)
-MU_mi <- tapply(MU_mi, names(MU_mi), sum)
-
-names(MU_mi)[MU_mi < (100000/0.621371)] <- "Other"#other if less than 100miles
-
-KW_mi <- sum(as.vector(net_protect_seg_fin$KW_Len_m),na.rm=T)
-
-protect <- data.frame(Mechanism = c("ONRW/OTRW","NationalW&S","StateW&S","EligibleStudyW&S","FreshwaterPA","RiparianPA","NWFPKeyWatersheds","Buffer","WatershedPA","FishingManagementPA","CriticalHabitat",names(IS_mi),names(IP_mi),names(MUS_mi),names(MU_mi)),
-                      RiverKM = c(onrw_mi,nws_mi,sws_mi,eli_mi,scenicO_mi,rfpa_mi,KW_mi,buff_mi,wpa_mi,fam_mi,critic_mi,IS_mi,IP_mi,MUS_mi,MU_mi),
-                      Label = c("ONRW/OTRW","National Wild & Scenic Rivers","State Wild & Scenic Rivers","Eligible Wild & Scenic Rivers",
-                                "Scenic Riverways, National Rivers & Recreation Areas","Riparian, Floodplain, Wetland Protection Areas",
-                                "Northwest Forest Plan - Key Watersheds","Riparian Buffers","Watershed Protection Areas",
-                                "Fishing Management Areas","Critical Habitat (ESA)",names(IS_mi),names(IP_mi),names(MUS_mi),names(MU_mi)),
-                      Category = c("River conservation system","River conservation system","River conservation system","River conservation system",
-                                   "River conservation system","Riparian & floodplain protection",
-                                   "Riparian & floodplain protection","Riparian & floodplain protection","Riparian & floodplain protection",
-                                   "Riparian & floodplain protection","Policies that focus on endangered species",rep("Incidental protected areas (strict)",length(IS_mi)),
-                                   rep("Incidental protected areas",length(IP_mi)),
-                                   rep("Multiple use landscapes/riverscapes (special management)",length(MUS_mi)),
-                                   rep("Multiple use landscapes/riverscapes",length(MU_mi))))
-
-#collapse all the categories with less than 100k
-protect <- aggregate(RiverKM~ Label+Category,protect,sum,na.rm=T)
-
-#add protection in %
-protect$Percent <- round(protect$RiverKM*100/sum(net_protect_seg_fin$Total_Length_m,na.rm=T),2)
-
-#transform to km
-protect$RiverKM <- protect$RiverKM/1000
-
-#transform to miles
-protect$RiverMI <- protect$RiverKM * 0.621371
-
-#set up colors
-protect$cols <- rep("#fcae91",nrow(protect))
-protect$cols[protect$Category %in% c("River conservation system")]<-"#628dbd"
-protect$cols[protect$Category %in% c("Riparian & floodplain protection")]<-"chartreuse4"
-protect$cols[protect$Category %in% c("Policies that focus on endangered species")]<-"#c06c84"
-protect$cols[protect$Category %in% c("Incidental protected areas (strict)")]<-"#fa8072"
-protect$cols[protect$Category %in% c("Multiple use landscapes/riverscapes (special management)")]<-grey(0.3)
-protect$cols[protect$Category %in% c("Multiple use landscapes/riverscapes")]<-"grey"
-
-# #reorder
-protect <- protect %>% arrange(factor(Category,levels=c("River conservation system","Riparian & floodplain protection","Policies that focus on endangered species",
-                                                        "Incidental protected areas (strict)","Incidental protected areas","Multiple use landscapes/riverscapes (special management)",
-                                                        "Multiple use landscapes/riverscapes")), -Percent)
-
-write.csv(protect,"outputs/Summary_protection_segments_IndependentCategory.csv")
-
-#------------------------------------------------------------------------------------
-#ONLY CONUS
-#------------------------------------------------------------------------------------
-
-#summarizing protection for different mechanisms
-net_protect_seg_fin <- net_protect_seg_fin[!net_protect_seg_fin$State %in% c("Alaska","Hawaii"),]
-
-#summarizing protection for different mechanisms
-onrw_mi <- sum(as.vector(net_protect_seg_fin$ONRW_Len_m),na.rm=T)
-nws_mi <- sum(as.vector(net_protect_seg_fin$NWS_Len_m),na.rm=T)
-sws_mi <- sum(as.vector(net_protect_seg_fin$SWS_Len_m),na.rm=T)
-eli_mi <- sum(as.vector(net_protect_seg_fin$NWS_Eli_Len_m),na.rm=T)
-otrw_mi <- sum(as.vector(net_protect_seg_fin$OTRW_Len_m),na.rm=T)
-onrw_mi <- onrw_mi+ otrw_mi
-
-scenicO_mi <- sum(as.vector(net_protect_seg_fin$FPA_Len_m),na.rm=T)
-rfpa_mi <- sum(as.vector(net_protect_seg_fin$RFPA_Len_m),na.rm=T)
-wpa_mi <- sum(as.vector(net_protect_seg_fin$WPA_Len_m),na.rm=T)
-fam_mi <- sum(as.vector(net_protect_seg_fin$FAM_Len_m),na.rm=T)
-
-iucn1_mi <- sum(as.vector(net_protect_seg_fin$IUCNI_Len_m),na.rm=T)
-iucn2_mi <- sum(as.vector(net_protect_seg_fin$IUCNII_Len_m),na.rm=T)
-iucn3_mi <- sum(as.vector(net_protect_seg_fin$IUCNIII_Len_m),na.rm=T)
-iucn4_mi <- sum(as.vector(net_protect_seg_fin$IUCNIV_Len_m),na.rm=T)
-iucn5_mi <- sum(as.vector(net_protect_seg_fin$IUCNV_Len_m),na.rm=T)
-iucn6_mi <- sum(as.vector(net_protect_seg_fin$IUCNVI_Len_m),na.rm=T)
-iucn7_mi <- sum(as.vector(net_protect_seg_fin$IUCNOTH_Len_m),na.rm=T)
-iucn_mi <- iucn3_mi+iucn4_mi+iucn5_mi+iucn6_mi
-iucnStrict_mi <- iucn1_mi+iucn2_mi
-
-iucn <- data.frame(IUCN_Len_m = c(net_protect_seg_fin$IUCNI_Len_m,net_protect_seg_fin$IUCNII_Len_m,net_protect_seg_fin$IUCNIII_Len_m,net_protect_seg_fin$IUCNIV_Len_m,
-                                  net_protect_seg_fin$IUCNV_Len_m,net_protect_seg_fin$IUCNVI_Len_m),
-                   IUCN_Des_Tp = c(net_protect_seg_fin$IUCNI_Des_Tp,net_protect_seg_fin$IUCNII_Des_Tp,net_protect_seg_fin$IUCNIII_Des_Tp,net_protect_seg_fin$IUCNIV_Des_Tp,
-                                   net_protect_seg_fin$IUCNV_Des_Tp,net_protect_seg_fin$IUCNVI_Des_Tp))
-IS_mi <- tapply(iucn$IUCN_Len_m[iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],iucn$IUCN_Des_Tp[iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],sum)
-IP_mi <- tapply(iucn$IUCN_Len_m[!iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],iucn$IUCN_Des_Tp[!iucn$IUCN_Des_Tp %in% c('Research Natural Area','State Wilderness','Wilderness Area','Wilderness Study Area',"National Park")],sum)
-names(IP_mi)[IP_mi < (100000/0.621371)] <- "Other" #other if less than 100 miles
-
-critic_mi <- sum(as.vector(net_protect_seg_fin$CritHabESA_Len_m),na.rm=T)
-
-buff_mi <- sum(as.vector(net_protect_seg_fin$BufferRiparian_Len_m),na.rm=T)
-
-gap3strict_mi <- sum(as.vector(net_protect_seg_fin$Gap3_Len_m[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")]))
-gap3_mi <- sum(as.vector(net_protect_seg_fin$Gap3_Len_m[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")]))
-MUS_mi <- tapply(net_protect_seg_fin$Gap3_Len_m[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],net_protect_seg_fin$Gap3_Des_Tp[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],sum)
-MU_mi <- tapply(net_protect_seg_fin$Gap3_Len_m[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],net_protect_seg_fin$Gap3_Des_Tp[!net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")],sum)
-
-#add other conservation areas and UA
-OTH_mi <- tapply(net_protect_seg_fin$IUCNOTH_Len_m,net_protect_seg_fin$IUCNOTH_Des_Tp,sum,na.rm=T)
-MU_mi <- c(MU_mi,OTH_mi)
-MU_mi <- tapply(MU_mi, names(MU_mi), sum)
-
-names(MU_mi)[MU_mi < (100000/0.621371)] <- "Other" #other if less than 100 miles
-
-
-KW_mi <- sum(as.vector(net_protect_seg_fin$KW_Len_m),na.rm=T)
-
-protect <- data.frame(Mechanism = c("ONRW/OTRW","NationalW&S","StateW&S","EligibleStudyW&S","FreshwaterPA","RiparianPA","NWFPKeyWatersheds","Buffer","WatershedPA","FishingManagementPA","CriticalHabitat",names(IS_mi),names(IP_mi),names(MUS_mi),names(MU_mi)),
-                      RiverKM = c(onrw_mi,nws_mi,sws_mi,eli_mi,scenicO_mi,rfpa_mi,KW_mi,buff_mi,wpa_mi,fam_mi,critic_mi,IS_mi,IP_mi,MUS_mi,MU_mi),
-                      Label = c("ONRW/OTRW","National Wild & Scenic Rivers","State Wild & Scenic Rivers","Eligible Wild & Scenic Rivers",
-                                "Scenic Riverways, National Rivers & Recreation Areas","Riparian, Floodplain, Wetland Protection Areas",
-                                "Northwest Forest Plan - Key Watersheds","Riparian Buffers","Watershed Protection Areas",
-                                "Fishing Management Areas","Critical Habitat (ESA)",names(IS_mi),names(IP_mi),names(MUS_mi),names(MU_mi)),
-                      Category = c("River conservation system","River conservation system","River conservation system","River conservation system",
-                                   "River conservation system","Riparian & floodplain protection",
-                                   "Riparian & floodplain protection","Riparian & floodplain protection","Riparian & floodplain protection",
-                                   "Riparian & floodplain protection","Policies that focus on endangered species",rep("Incidental protected areas (strict)",length(IS_mi)),
-                                   rep("Incidental protected areas",length(IP_mi)),
-                                   rep("Multiple use landscapes/riverscapes (special management)",length(MUS_mi)),
-                                   rep("Multiple use landscapes/riverscapes",length(MU_mi))))
-
-#collapse all the categories 
-protect <- aggregate(RiverKM~ Label+Category,protect,sum,na.rm=T)
-
-#add protection in %
-protect$Percent <- round(protect$RiverKM*100/sum(net_protect_seg_fin$Total_Length_m,na.rm=T),2)
-
-#transform to km
-protect$RiverKM <- protect$RiverKM/1000
-
-#transform to miles
-protect$RiverMI <- protect$RiverKM * 0.621371
-
-
-#set up colors
-protect$cols <- rep("#fcae91",nrow(protect))
-protect$cols[protect$Category %in% c("River conservation system")]<-"#628dbd"
-protect$cols[protect$Category %in% c("Riparian & floodplain protection")]<-"chartreuse4"
-protect$cols[protect$Category %in% c("Policies that focus on endangered species")]<-"#c06c84"
-protect$cols[protect$Category %in% c("Incidental protected areas (strict)")]<-"#fa8072"
-protect$cols[protect$Category %in% c("Multiple use landscapes/riverscapes (special management)")]<-grey(0.3)
-protect$cols[protect$Category %in% c("Multiple use landscapes/riverscapes")]<-"grey"
-
-# #reorder
-protect <- protect %>% arrange(factor(Category,levels=c("River conservation system","Riparian & floodplain protection","Policies that focus on endangered species",
-                                                        "Incidental protected areas (strict)","Incidental protected areas","Multiple use landscapes/riverscapes (special management)",
-                                                        "Multiple use landscapes/riverscapes")), -Percent)
-
-
-write.csv(protect,"outputs/Summary_protection_segments_IndependentCategory_CONUS.csv")
-
-
-#----------------
-#Formatting data
-protect <- read.csv("data/Summary_protection_segments_IndependentCategory.csv")
-protect$Percent <- round(protect$Percent,1)
-protectC <- read.csv("data/Summary_protection_segments_IndependentCategory_CONUS.csv")
-protectC$Percent <- round(protectC$Percent,1)
-
-#clean legends
-protectC$Category <- gsub("River conservation system","River conservation",protectC$Category)
-protectC$Category <- gsub("Riparian & floodplain protection","Riparian & floodplain conservation",protectC$Category)
-protectC$Category <- gsub("Incidental protected areas$","Incidental protected areas (other)",protectC$Category)
-protectC$Category <- gsub("Multiple use landscapes/riverscapes$","Multiple use (other)",protectC$Category)
-protectC$Category <- gsub("landscapes/riverscapes","",protectC$Category)
-protectC$Category <- gsub("  "," ",protectC$Category)
-
-protect$Category <- gsub("River conservation system","River conservation",protect$Category)
-protect$Category <- gsub("Riparian & floodplain protection","Riparian & floodplain conservation",protect$Category)
-protect$Category <- gsub("Incidental protected areas$","Incidental protected areas (other)",protect$Category)
-protect$Category <- gsub("Multiple use landscapes/riverscapes$","Multiple use (other)",protect$Category)
-protect$Category <- gsub("landscapes/riverscapes","",protect$Category)
-protect$Category <- gsub("  "," ",protect$Category)
-
-protect$Category <- gsub("Incidental","Terrestrial",protect$Category)
-protectC$Category <- gsub("Incidental","Terrestrial",protectC$Category)
-
-
-#Save Table 1
-pp <- aggregate(.~ Category,sum,data=protect[,c("Category", "RiverKM","Percent","RiverMI")])
-ppC <- aggregate(.~ Category,sum,data=protectC[,c("Category", "RiverKM","Percent","RiverMI")])
-names(ppC) <- paste0("CONUS.",names(ppC))
-
-pp <- cbind(pp,ppC[,c("CONUS.RiverKM","CONUS.Percent","CONUS.RiverMI")])
-write.csv(pp,"outputs/Table1_summary_mechanisms.csv")
-
 #-------------------------------------------------
 #Summary protection by PRI classes
 net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv")
@@ -261,7 +29,7 @@ L_P_conter <- tapply(net_protect_seg_fin$OverallProtection_Len_m[!net_protect_se
 L_P_conter[1] <- sum(net_protect_seg_fin$Total_Length_m[!net_protect_seg_fin$State %in% c("Alaska","Hawaii")]-net_protect_seg_fin$OverallProtection_Len_m[!net_protect_seg_fin$State %in% c("Alaska","Hawaii")],na.rm=T)
 
 L_P_conter <- L_P_conter /1000
-L_P_mi_conter <- L_P_conter  * 0.621371
+L_P_mi_conter <- L_P_conter * 0.621371
 L_P_per_conter <- L_P_conter*100/sum(net_protect_seg_fin$Total_Length_m[!net_protect_seg_fin$State %in% c("Alaska","Hawaii")]/1000,na.rm=T)
 
 RIPRivers <- data.frame(ProtectedMilesCONUS=L_P_mi_conter,ProtectedMilesUS=L_P_mi,
@@ -296,11 +64,322 @@ lines(c(b[3]-0.5,b[5]+0.5),c(750000/0.6214,750000/0.6214),lwd=2)
 text(b[4],850000/0.6214,"Viable protection",font=3,cex=1.2)
 dev.off()
 
+#------------------------------------------------- 
+#Summary protection by mechanisms
+library(sf); library(data.table); library(MESS); library(dplyr)
+
+
+#segment-level data
+net_protect_seg_fin <- read.csv("outputs/Table_protection_segments_RIPAllCombined.csv")
+
+#pad HUC12 with zeros
+net_protect_seg_fin$HUC_12 <- as.character(net_protect_seg_fin$HUC_12)
+net_protect_seg_fin$HUC_12 <- ifelse(sapply(strsplit(net_protect_seg_fin$HUC_12,"*"),length)==11,paste0("0",net_protect_seg_fin$HUC_12),net_protect_seg_fin$HUC_12)
+
+#identify columns
+L <- grep("Len_m",names(net_protect_seg_fin))
+huc <- which(names(net_protect_seg_fin)=='HUC_12')
+
+
+#-----Remove overlap within categories 
+
+#River conservation: ONRW = OTRW > NWS > SWS > Eligible
+#------------------------------------------------------------------
+ONRW_Len_m <- net_protect_seg_fin$ONRW_Len_m
+ONRW_Len_m[net_protect_seg_fin$ONRW_Len_per < 5] <- 0
+
+OTRW_Len_m <- net_protect_seg_fin$OTRW_Len_m - net_protect_seg_fin$ONRW_Len_m
+OTRW_Len_m[OTRW_Len_m < 0] <- 0
+OTRW_Len_m[net_protect_seg_fin$OTRW_Len_per < 5] <- 0
+
+NWSF_Len_m <- net_protect_seg_fin$NWS_Len_m - ONRW_Len_m - OTRW_Len_m 
+NWSF_Len_m[NWSF_Len_m < 0] <- 0
+NWSF_Len_m[net_protect_seg_fin$NWSF_Len_per < 5] <- 0
+
+SWSF_Len_m <- net_protect_seg_fin$SWS_Len_m - ONRW_Len_m - OTRW_Len_m - NWSF_Len_m 
+SWSF_Len_m[SWSF_Len_m < 0] <- 0
+SWSF_Len_m[net_protect_seg_fin$SWSF_Len_per < 5] <- 0
+
+NWSF_Eli_Len_m <- net_protect_seg_fin$NWS_Eli_Len_m - ONRW_Len_m - OTRW_Len_m - NWSF_Len_m - SWSF_Len_m
+NWSF_Eli_Len_m[NWSF_Eli_Len_m < 0] <- 0
+NWSF_Eli_Len_m[net_protect_seg_fin$NWS_Eli_Len_per < 5] <- 0
+
+FPA_Len_m <- net_protect_seg_fin$FPA_Len_m - ONRW_Len_m - OTRW_Len_m - NWSF_Len_m - SWSF_Len_m - NWSF_Eli_Len_m 
+FPA_Len_m[FPA_Len_m < 0] <- 0
+FPA_Len_m[net_protect_seg_fin$FPA_Len_per < 5] <- 0
+
+RiverSystem_Len <-  ONRW_Len_m + OTRW_Len_m + NWSF_Len_m + SWSF_Len_m + NWSF_Eli_Len_m + FPA_Len_m
+RiverSystem_Len <-  RiverSystem_Len
+
+
+#Riparian conservation: RFPA > KW > WPA > FAM > RipBuff
+#------------------------------------------------------------------
+RFPA_Len_m <- net_protect_seg_fin$RFPA_Len_m
+RFPA_Len_m[net_protect_seg_fin$RFPA_Len_m < 5] <- 0
+
+KW_Len_m <- net_protect_seg_fin$KW_Len_m - RFPA_Len_m 
+KW_Len_m[KW_Len_m<0] <- 0
+KW_Len_m[net_protect_seg_fin$KW_Len_per < 5] <- 0
+
+WPA_Len_m <- net_protect_seg_fin$WPA_Len_m - RFPA_Len_m - KW_Len_m 
+WPA_Len_m[WPA_Len_m<0] <- 0
+WPA_Len_m[net_protect_seg_fin$WPA_Len_per < 5] <- 0
+
+FAM_Len_m <- net_protect_seg_fin$FAM_Len_m - RFPA_Len_m - KW_Len_m - WPA_Len_m 
+FAM_Len_m[FAM_Len_m<0] <- 0
+FAM_Len_m[net_protect_seg_fin$FAM_Len_per < 5] <- 0
+
+BufferRiparian_Len_m <- net_protect_seg_fin$BufferRiparian_Len_m - RFPA_Len_m - KW_Len_m - WPA_Len_m - FAM_Len_m
+BufferRiparian_Len_m[BufferRiparian_Len_m<0] <- 0
+BufferRiparian_Len_m[net_protect_seg_fin$BufferRiparian_Len_per < 5] <- 0
+
+RiparianSystem_Len <- RFPA_Len_m + KW_Len_m + WPA_Len_m + FAM_Len_m + BufferRiparian_Len_m
+RiparianSystem_Len <-  RiparianSystem_Len
+
+#Split riparian protected area per designation type
+dat_rip <- data.frame(COMID_LC = c(net_protect_seg_fin$COMID_LC,net_protect_seg_fin$COMID_LC,net_protect_seg_fin$COMID_LC,net_protect_seg_fin$COMID_LC,net_protect_seg_fin$COMID_LC),
+                      HUC_12 = c(net_protect_seg_fin$HUC_12,net_protect_seg_fin$HUC_12,net_protect_seg_fin$HUC_12,net_protect_seg_fin$HUC_12,net_protect_seg_fin$HUC_12),
+                      Des_Tp = c(net_protect_seg_fin$RFPA_Des_Tp,net_protect_seg_fin$WPA_Des_Tp,net_protect_seg_fin$FAM_Des_Tp,ifelse(net_protect_seg_fin$BufferRiparian_Des_Tp=="NWFP_RiparianReserves","NWFP Riparian Reserves","State riparian buffers"),rep("NWFP Key Watersheds",nrow(net_protect_seg_fin))),
+                      Len = c(net_protect_seg_fin$RFPA_Len_m,net_protect_seg_fin$WPA_Len_m,net_protect_seg_fin$FAM_Len_m,net_protect_seg_fin$BufferRiparian_Len_m,net_protect_seg_fin$KW_Len_m))
+dat_rip <- na.omit(dat_rip)
+RIP <- reshape2::dcast(dat_rip, COMID_LC ~ Des_Tp, value.var = "Len",max)#there should be no overlaping designation but in case use max instead of sum (in case a designation type has been assigned to more than one category)
+RIP <- RIP[match(net_protect_seg_fin$COMID_LC,RIP$COMID_LC),]
+RIP$COMID_LC <- net_protect_seg_fin$COMID_LC #for NA
+RIP <- replace(RIP, RIP == "-Inf", 0)
+RIP <- replace(RIP, is.na(RIP)==T, 0)
+rm(list='dat_rip')
+
+#merge all mechanisms with less than 100 miles in 'Other'
+agg <- names(RIP)[which(apply(RIP,2,sum) < 100000/ 0.621371)]
+RIP$Other <- apply(RIP[,names(RIP) %in% c(agg,'Other')],1,sum)
+RIP <- RIP[,!names(RIP) %in% agg]
+names(RIP)[-1] <- paste0("RIP_",names(RIP)[-1])
+
+
+#Terrestrial protected area (strict)
+#------------------------------------------------------------------
+dat_ics <- data.frame(COMID_LC = c(net_protect_seg_fin$COMID_LC,net_protect_seg_fin$COMID_LC),HUC_12 = c(net_protect_seg_fin$HUC_12,net_protect_seg_fin$HUC_12),Des_Tp = c(net_protect_seg_fin$IUCNI_Des_Tp,net_protect_seg_fin$IUCNII_Des_Tp),Len = c(net_protect_seg_fin$IUCNI_Len_m,net_protect_seg_fin$IUCNII_Len_m))
+dat_ics <- na.omit(dat_ics)
+IS <- reshape2::dcast(dat_ics, COMID_LC ~ Des_Tp, value.var = "Len",max) #Use max instead of sum (in case a designation type has been assigned to more than one category)
+IS <- IS[match(net_protect_seg_fin$COMID_LC,IS$COMID_LC),]
+IS$COMID_LC <- net_protect_seg_fin$COMID_LC
+IS <- replace(IS, IS == "-Inf", 0)
+IS <- replace(IS, is.na(IS)==T, 0)
+ISS <- IS[,!names(IS) %in% "Conservation Easement"]
+rm(list='dat_ics')
+names(ISS)[-1] <- paste0("INC1_",names(ISS)[-1])
+
+IUCNI_Len_m <- net_protect_seg_fin$IUCNI_Len_m
+IUCNI_Len_m[net_protect_seg_fin$IUCNI_Len_per < 5] <- 0
+
+IUCNII_Len_m <- net_protect_seg_fin$IUCNII_Len_m - IUCNI_Len_m 
+IUCNII_Len_m[IUCNII_Len_m<0] <- 0
+IUCNII_Len_m[net_protect_seg_fin$IUCNII_Len_per < 5] <- 0
+
+IUCNI_Len_m[which(net_protect_seg_fin$IUCNI_Des_Tp == "Conservation Easement")] <- 0 #remove conservation easements (will go to 'other' category)
+IUCNII_Len_m[which(net_protect_seg_fin$IUCNII_Len_m == "Conservation Easement")] <- 0
+
+IncidentalStrict_Len <- IUCNI_Len_m + IUCNII_Len_m 
+IncidentalStrict_Len <-  IncidentalStrict_Len
+
+#Terrestrial protected area (others)
+#------------------------------------------------------------------
+ISCC_Len_m <- IS[,names(IS) %in% c("Conservation Easement")] #add conservation easements
+
+IUCNIII_Len_m <- net_protect_seg_fin$IUCNIII_Len_m - ISCC_Len_m 
+IUCNIII_Len_m[IUCNIII_Len_m<0] <- 0
+IUCNIII_Len_m[net_protect_seg_fin$IUCNIII_Len_per < 5] <- 0
+
+IUCNIV_Len_m <- net_protect_seg_fin$IUCNIV_Len_m - ISCC_Len_m - IUCNIII_Len_m
+IUCNIV_Len_m[IUCNIV_Len_m<0] <- 0
+IUCNIV_Len_m[net_protect_seg_fin$IUCNIV_Len_per < 5] <- 0
+
+IUCNV_Len_m <- net_protect_seg_fin$IUCNV_Len_m - ISCC_Len_m - IUCNIII_Len_m - IUCNIV_Len_m 
+IUCNV_Len_m[IUCNV_Len_m<0] <- 0
+IUCNV_Len_m[net_protect_seg_fin$IUCNV_Len_per < 5] <- 0
+
+IUCNVI_Len_m <- net_protect_seg_fin$IUCNVI_Len_m - ISCC_Len_m - IUCNIII_Len_m - IUCNIV_Len_m - IUCNV_Len_m 
+IUCNVI_Len_m[IUCNVI_Len_m<0] <- 0
+IUCNVI_Len_m[net_protect_seg_fin$IUCNVI_Len_per < 5] <- 0
+
+Incidental_Len <- ISCC_Len_m + IUCNIII_Len_m + IUCNIV_Len_m + IUCNV_Len_m  + IUCNVI_Len_m
+Incidental_Len <-  Incidental_Len
+
+dat_ics <- data.frame(COMID_LC = rep(net_protect_seg_fin$COMID_LC,5),
+                      HUC_12 = rep(net_protect_seg_fin$HUC_12,5),
+                      Des_Tp = c(net_protect_seg_fin$IUCNIII_Des_Tp,net_protect_seg_fin$IUCNIV_Des_Tp,net_protect_seg_fin$IUCNV_Des_Tp,net_protect_seg_fin$IUCNVI_Des_Tp,rep("Conservation Easement",length(ISCC_Len_m))),
+                      Len = c(net_protect_seg_fin$IUCNIII_Len_m,net_protect_seg_fin$IUCNIV_Len_m,net_protect_seg_fin$IUCNV_Len_m,net_protect_seg_fin$IUCNVI_Len_m,ISCC_Len_m))
+
+dat_ics <- na.omit(dat_ics)
+IS <- reshape2::dcast(dat_ics, COMID_LC ~ Des_Tp, value.var = "Len",max) #use max to avoid duplicates among layers (same designation type for different mechanisms)
+IS <- IS[match(net_protect_seg_fin$COMID_LC,IS$COMID_LC),]
+IS$COMID_LC <- net_protect_seg_fin$COMID_LC
+IS <- replace(IS, IS == "-Inf", 0)
+IS <- replace(IS, is.na(IS)==T, 0)
+rm(list='dat_ics')
+
+#merge all mechanisms with less than 100 miles in 'Other'
+agg <- names(IS)[which(apply(IS,2,sum) < 100000/0.621371)]
+IS$Other <- apply(IS[,names(IS) %in% c(agg,'Other')],1,sum)
+IS <- IS[,!names(IS) %in% agg]
+names(IS)[-1] <- paste0("INC2_",names(IS)[-1])
+
+dat_mult <- data.frame(COMID_LC = rep(net_protect_seg_fin$COMID_LC,2),
+                       HUC_12 = rep(net_protect_seg_fin$HUC_12,2),
+                       Des_Tp = c(net_protect_seg_fin$Gap3_Des_Tp,net_protect_seg_fin$IUCNOTH_Des_Tp),
+                       Len = c(net_protect_seg_fin$Gap3_Len_m,net_protect_seg_fin$IUCNOTH_Len_m))
+dat_mult <- na.omit(dat_mult)
+MultipleUse <- reshape2::dcast(dat_mult, COMID_LC ~ Des_Tp, value.var = "Len",max) #use max to avoid duplicates among layers (same designation type for different mechanisms)
+MultipleUse <- MultipleUse[match(net_protect_seg_fin$COMID_LC,MultipleUse$COMID_LC),]
+MultipleUse$COMID_LC <- net_protect_seg_fin$COMID_LC
+MultipleUse <- replace(MultipleUse, MultipleUse == "-Inf", 0)
+MultipleUse <- replace(MultipleUse, is.na(MultipleUse)==T, 0)
+rm(list='dat_mult')
+
+
+#Multiple use (special management)
+#------------------------------------------------------------------
+MultipleUseSpecial_Len <- MultipleUse$'Area Of Critical Environmental Concern' + MultipleUse$'Inventoried Roadless Area' #[no overlap among them]
+MultipleUseSpecial_Len <-  MultipleUseSpecial_Len
+names(MultipleUse)[!names(MultipleUse) %in% c("COMID_LC","Area Of Critical Environmental Concern","Inventoried Roadless Area")] <- paste(names(MultipleUse)[!names(MultipleUse) %in% c("COMID_LC","Area Of Critical Environmental Concern","Inventoried Roadless Area")],"[Gap 3]")
+MultipleUse_special <- MultipleUse[,names(MultipleUse) %in% c("COMID_LC","Area Of Critical Environmental Concern","Inventoried Roadless Area")]
+MultipleUse <- MultipleUse[,!names(MultipleUse) %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")]
+
+#merge all mechanisms with less than 100 miles in 'Other'
+agg <- names(MultipleUse)[which(apply(MultipleUse,2,sum) < 100000/0.621371)]
+MultipleUse$'Other [Gap 3]' <- apply(MultipleUse[,names(MultipleUse) %in% c(agg,'Other [Gap 3]')],1,sum)
+MultipleUse <- MultipleUse[,!names(MultipleUse) %in% agg]
+
+#Multiple use (others)
+#------------------------------------------------------------------
+m1 <- net_protect_seg_fin$Gap3_Len_m
+m1[net_protect_seg_fin$Gap3_Des_Tp %in% c("Area Of Critical Environmental Concern","Inventoried Roadless Area")] <- 0
+m2 <- net_protect_seg_fin$IUCNOTH_Len_m
+m1 <- m1 - m2 #removing overlap
+m1[m1 < 0] <- 0
+
+MultipleUse_Len <- m1 + m2
+MultipleUse_Len <-  MultipleUse_Len
+
+names(MultipleUse) <- gsub("[Gap 3]","",names(MultipleUse),fixed=T)
+names(MultipleUse) <- gsub(" $","",names(MultipleUse))
+names(MultipleUse)[-1] <- paste0("MULT2_","",names(MultipleUse)[-1])
+
+names(MultipleUse_special)[-1] <- paste0("MULT1_","",names(MultipleUse_special)[-1])
+
+
+#Critical habitat
+#------------------------------------------------------------------
+CriticalHabitat_Len <- net_protect_seg_fin$CritHabESA_Len_m
+CriticalHabitat_Len <-  CriticalHabitat_Len
+
+
+#Format table
+#------------------------------------------------------------------
+
+#Total protection (after removing all overlap)
+FinalProt_LenT <- net_protect_seg_fin$OverallProtection_Len_m
+
+#Total length
+TotalLen <- net_protect_seg_fin$Total_Length_m
+
+#Prepare PRI classes
+Class.1 <- ifelse(net_protect_seg_fin$RIP_Class == "Class 1",FinalProt_LenT,0) 
+Class.2 <- ifelse(net_protect_seg_fin$RIP_Class == "Class 2",FinalProt_LenT,0) 
+Class.3 <- ifelse(net_protect_seg_fin$RIP_Class == "Class 3",FinalProt_LenT,0) 
+Class.4 <- ifelse(net_protect_seg_fin$RIP_Class == "Class 4",FinalProt_LenT,0) 
+Unprotected <- TotalLen - Class.1 - Class.2 - Class.3 - Class.4 #accounts for both entirely unprotected segments and partially unprotected ones
+
+#Add viable
+Viable <- Class.1 + Class.2 + Class.3
+
+#Add non-viable
+NonViable <- Class.4 + Unprotected
+
+#Create data frame from with individual and combined mechanisms
+dataOver <- data.frame(COMID_LC = net_protect_seg_fin$COMID_LC, HUC_12 = net_protect_seg_fin$HUC_12,State = net_protect_seg_fin$State,PRI = net_protect_seg_fin$RIP,PRI_Class = net_protect_seg_fin$RIP_Class,Class.1,Class.2,Class.3,Class.4,Unprotected,Viable,
+                       NonViable, RiverSystem=RiverSystem_Len,RiparianSystem=RiparianSystem_Len,IncidentalStrict=IncidentalStrict_Len,Incidental=Incidental_Len,
+                       MultipleUseSpecial=MultipleUseSpecial_Len,MultipleUse=MultipleUse_Len,CriticalHabitat=CriticalHabitat_Len,FinalProt_LenT,TotalLen,
+                       RIV_ONRW.OTRW = (ONRW_Len_m + OTRW_Len_m),RIV_National.Wild.Scenic=net_protect_seg_fin$NWS_Len_m,
+                       RIV_State.Wild.Scenic=net_protect_seg_fin$SWS_Len_m,
+                       RIV_Eligible.Study.Wild.Scenic=net_protect_seg_fin$NWS_Eli_Len_m,RIV_ScenicRiverways.NationalRivers=net_protect_seg_fin$FPA_Len_m,
+                       RIP[match(net_protect_seg_fin$COMID_LC,RIP$COMID_LC),-1],
+                       CRI_CriticalHabitat=CriticalHabitat_Len,
+                       ISS[match(net_protect_seg_fin$COMID_LC,ISS$COMID_LC),-1],IS[,-1],
+                       MultipleUse_special[match(net_protect_seg_fin$COMID_LC,MultipleUse_special$COMID_LC),-1],
+                       MultipleUse[match(net_protect_seg_fin$COMID_LC,MultipleUse$COMID_LC),-1])
+#a bit of cleaning
+names(dataOver) <- gsub("..",".",names(dataOver),fixed=T)
+
+
+#Get a summary per category (in km and %)
+#-------------------------------
+RiverSystem <- sum(dataOver$RiverSystem)/1000
+RiparianSystem <- sum(dataOver$RiparianSystem)/1000
+IncidentalStrict <- sum(dataOver$IncidentalStrict)/1000
+Incidental <- sum(dataOver$Incidental)/1000
+MultipleUseSpecial <- sum(dataOver$MultipleUseSpecial)/1000
+MultipleUse <- sum(dataOver$MultipleUse)/1000
+CriticalHabitat <- sum(dataOver$CriticalHabitat)/1000
+TotalLength <- sum(dataOver$TotalLen)/1000
+
+RiverSystemP <- sum(dataOver$RiverSystem)*100/sum(dataOver$TotalLen)
+RiparianSystemP <- sum(dataOver$RiparianSystem)*100/sum(dataOver$TotalLen)
+IncidentalStrictP <- sum(dataOver$IncidentalStrict)*100/sum(dataOver$TotalLen)
+IncidentalP <- sum(dataOver$Incidental)*100/sum(dataOver$TotalLen)
+MultipleUseSpecialP <- sum(dataOver$MultipleUseSpecial)*100/sum(dataOver$TotalLen)
+MultipleUseP <- sum(dataOver$MultipleUse)*100/sum(dataOver$TotalLen)
+CriticalHabitatP <- sum(dataOver$CriticalHabitat)*100/sum(dataOver$TotalLen)
+TotalLengthP <- sum(dataOver$TotalLen)*100/sum(dataOver$TotalLen)
+
+Tot <- c(RiverSystem,RiparianSystem,IncidentalStrict,Incidental,MultipleUseSpecial,MultipleUse,CriticalHabitat,TotalLength)
+TotP <- c(RiverSystemP,RiparianSystemP,IncidentalStrictP,IncidentalP,MultipleUseSpecialP,MultipleUseP,CriticalHabitatP,TotalLengthP)
+Tot <- rbind(round(Tot),round(TotP,1))
+colnames(Tot) <- c("RiverSystem","RiparianSystem","IncidentalStrict","Incidental","MultipleUseSpecial","MultipleUse","CriticalHabitat","TotalLength")
+write.csv(Tot,"outputs/Table1_SummaryProtectionPerCategory.csv")
+
+RiverSystem <- sum(dataOver$RiverSystem[! dataOver$State %in% c("Alaska","Hawaii")])/1000
+RiparianSystem <- sum(dataOver$RiparianSystem[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+IncidentalStrict <- sum(dataOver$IncidentalStrict[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+Incidental <- sum(dataOver$Incidental[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+MultipleUseSpecial <- sum(dataOver$MultipleUseSpecial[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+MultipleUse <- sum(dataOver$MultipleUse[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+CriticalHabitat <- sum(dataOver$CriticalHabitat[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+TotalLength <- sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])/1000
+
+RiverSystemP <- sum(dataOver$RiverSystem[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+RiparianSystemP <- sum(dataOver$RiparianSystem[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+IncidentalStrictP <- sum(dataOver$IncidentalStrict[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+IncidentalP <- sum(dataOver$Incidental[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+MultipleUseSpecialP <- sum(dataOver$MultipleUseSpecial[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+MultipleUseP <- sum(dataOver$MultipleUse[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+CriticalHabitatP <- sum(dataOver$CriticalHabitat[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+TotalLengthP <- sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])*100/sum(dataOver$TotalLen[!dataOver$State %in% c("Alaska","Hawaii")])
+
+TotCONUS <- c(RiverSystem,RiparianSystem,IncidentalStrict,Incidental,MultipleUseSpecial,MultipleUse,CriticalHabitat,TotalLength)
+TotPCONUS <- c(RiverSystemP,RiparianSystemP,IncidentalStrictP,IncidentalP,MultipleUseSpecialP,MultipleUseP,CriticalHabitatP,TotalLengthP)
+TotCONUS <- rbind(round(TotCONUS),round(TotPCONUS,1))
+colnames(TotCONUS) <- c("RiverSystem","RiparianSystem","IncidentalStrict","Incidental","MultipleUseSpecial","MultipleUse","CriticalHabitat","TotalLength")
+write.csv(TotCONUS,"outputs/Table1_SummaryProtectionPerCategoryCONUS.csv")
+
+#----------------Summary individual mechanisms of protection
+pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(dataOver)))
+mat <- dataOver[,pick]
+summ_all <- apply(mat,2,sum)*100/sum(dataOver$TotalLen)
+summ_all <- round(summ_all,1)
+write.csv(summ_all,"outputs/SummaryIndividualProtectionMechanism.csv")
+
+#Save segment layer as a geopackage [layer provided]
+#convert to percentages, except protected length (converted in miles) and PRI (2 digits for length and PRI and one digit percentages)
+#add metadata for visualization purposes: name, COMID v2.1, stream order and floodplain extent (for Alaska)
+#transform percentage for protection classes to binary protected vs not
+# st_write(net, "data/NPRALayer_segment.gpkg",append=FALSE) 
+
 
 #-------------------------------------------
 #Network of mechanisms
 library(sf); library(reshape2)
-net <- st_read("outputs/NPRALayer_segment.gpkg")
+net <- st_read("data/NPRALayer_segment.gpkg")
 net <- st_drop_geometry(net)
 
 net$PRI_Class <- ifelse(net$PRI ==0,"Unprotected",ifelse(net$PRI <= 1.25, "Class 4",
@@ -315,26 +394,26 @@ mat_len <- mat * net$TotalLen
 colnames(mat)[colnames(mat) =="RIP_State.riparian.buffers"] <- "RIP_State.Riparian.Buffers"
 colnames(mat_len)[colnames(mat_len) =="RIP_State.riparian.buffers"] <- "RIP_State.Riparian.Buffers"
 
-#select only protected segments
+#Select only protected segments
 mat <- mat[-which(apply(mat,1,sum)==0),]
 dim(mat)
 
-#frequencies
+#Estimate frequencies
 DAAT_abs1 <- apply(mat,2,sum)/nrow(mat)
 write.table(DAAT_abs1,"outputs/FrequenciesMechanisms.csv")
 
-#prevalence (for nodes)
+#Estimate prevalence (for nodes)
 DAAT_abs <- apply(mat_len,2,sum)/sum(net$TotalLen)
 write.table(DAAT_abs,"outputs/PrevalenceMechanisms.csv")
 
-#using co-occurence
+#Estimate co-occurence index
 mat <- cbind(0,0,0,0,mat)#dummy variables at the beginning
 cor_v <- ecospat.co_occurrences(data=mat)#remove the first 4 columns
 
 write.table(cor_v,"outputs/CooccurrenceMechanisms.csv")
 
 
-##########################Figure
+#-----------------------Figure
 library(igraph); library(corrplot); library(ecospat); library(pheatmap) ; library(ggraph); library(cowplot)
 
 darken <- function(color, factor=1.4){
@@ -412,8 +491,8 @@ g %>%
 dev.off()
 
 
-#------------------------------
-#Number of mechanisms
+#-----------------------------------------
+#Estimate number of mechanisms per segment
 library(sf); library(reshape2)
 
 net <- st_read("data/NPRALayer_segment.gpkg")
@@ -421,10 +500,10 @@ net <- st_drop_geometry(net)
 pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net)))
 mat <- net[,pick]
 
-#transform matrix to binary protected versus not
+#Transform matrix to binary protected versus not
 mat <- ifelse(mat>0,1,0)
 
-#number of mechanisms
+#Estimate number of mechanisms
 net$NumberMechanism <- apply(mat,1,sum)
 
 #Mean number of mechansisms (across all segments)
@@ -452,7 +531,7 @@ F_stat_state$protect <- F_stat_state$FinalProt_LenT*100/sum(net$TotalLen)
 
 write.csv(F_stat_state,"outputs/NumberMecha_s.csv",row.names=F)
 
-#Figure
+#------------------------Figure
 F_stat_state <- read.csv("outputs/NumberMecha_s.csv")
 
 cols_bar <- rev(c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))

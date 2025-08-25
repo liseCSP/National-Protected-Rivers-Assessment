@@ -2,7 +2,7 @@
 #Identifying gaps in protection & opportunities - watersheds
 #-------------------------------------------------------
 
-#Lise Comte, April 2025
+#Lise Comte, August 2025
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
@@ -359,8 +359,15 @@ a2 <- table(huc12_p$priorityTot,standS)
 aa <- table(huc12_p$priorityTot,standL)
 aa[2,1]*100/sum(aa[2,]) #47.83862
 
+#considering both local and upstream protection
 (a1[2,1] + a2[2,1])*100/sum(a1[2,],a2[2,]) #40.05764
 
+#highest protection potential:low degree of local protection but high degree of upstream protection
+onlyU <- ifelse(standL == "low" & standU == "high","onlyU","other") #non-source watersheds
+uu <- table(huc12_p$priorityTot,onlyU,useNA="ifany")
+uu[2,1]*100/sum(uu[2,]) #4.034582 for non-source watersheds
+uu[2,3]*100/sum(uu[2,]) #32.56484 for source watersheds
+((uu[2,1]+uu[2,3])*100)/sum(uu[2,]) #36.59942 total
 
 #count of watershed independently for each indicator
 table(huc12_p$DrinkTop25Tot,huc12_p$NoViableLocal)#[0 is protection]
