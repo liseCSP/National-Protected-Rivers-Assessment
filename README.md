@@ -1,7 +1,7 @@
 # National-Protected-Rivers-Assessment
 Repository supporting the analyses presented in the manuscript "The urgent need for expanded protections to safeguarding America’s rivers"
 
-The repository includes five R scripts to reproduce the analyses and figures presented in the manuscript. Data are available in the repository and otherwise sourced in the scripts. All the data should be added to the 'data' folder before running the scripts.
+The repository includes five R scripts to reproduce the analyses and figures presented in the manuscript. Data are available in the repository (https://doi.org/10.5281/zenodo.17279334) and otherwise sourced in the scripts. All the data should be added to the 'data' folder before running the scripts.
 
 1.MechanismsProtection.R
     --> Summarize the extent of river protection per class of the Protected River Index (PRI), and includes code for Figure 1b-c
