@@ -1,0 +1,50 @@
+,Hydrology,Connectivity,WaterQuality,Habitat,Biotic,Total
+ONRW/OTRW - Tier 3,0.7,0.7,1,0.8,0.6,0.76
+ONRW/OTRW - Tier 2.5,0.525,0.525,0.75,0.6,0.45,0.57
+Wild & Scenic Rivers - Wild (Corridor),0.8,0.9,0.8,0.8,0.6,0.78
+Wild & Scenic Rivers - Wild,0.8,0.8,0.8,0.8,0.6,0.76
+Wild & Scenic Rivers - Scenic (Corridor),0.8,0.9,0.8,0.8,0.6,0.78
+Wild & Scenic Rivers - Scenic,0.8,0.8,0.8,0.8,0.6,0.76
+Wild & Scenic Rivers - Recreational (Corridor),0.4,0.45,0.4,0.4,0.3,0.39
+Wild & Scenic Rivers - Recreational,0.4,0.4,0.4,0.4,0.3,0.38
+Eligible & Study Wild & Scenic Rivers (Corridor),0.4,0.45,0.4,0.4,0.3,0.39
+Eligible & Study Wild & Scenic Rivers,0.4,0.4,0.4,0.4,0.3,0.38
+State Wild & Scenic Rivers (Corridor),0.8,0.7,0.8,0.8,0.6,0.74
+State Wild & Scenic Rivers,0.8,0.6,0.8,0.8,0.6,0.72
+"Scenic Riverways, National Rivers & Recreation Areas (Gap Status 1)",0.6,0.6,0.8,0.8,0.6,0.68
+"Scenic Riverways, National Rivers & Recreation Areas (Gap Status 2)",0.45,0.45,0.6,0.6,0.45,0.51
+"Riparian, Floodplain, Wetland Protection Areas (Gap Status 1)",0.4,0.3,0.6,0.6,0.6,0.5
+"Riparian, Floodplain, Wetland Protection Areas (Gap Status 2)",0.3,0.225,0.45,0.45,0.45,0.375
+Watershed Protection Areas (Gap Status 1),0.2,0.3,0.6,0.4,0.4,0.38
+Watershed Protection Areas (Gap Status 2),0.15,0.225,0.45,0.15,0.3,0.255
+Northwest Forest Plan - Key Watersheds,0.2,0.3,0.4,0.4,0.4,0.34
+Northwest Forest Plan - Riparian Reserves,0.2,0.2,0.4,0.3,0.2,0.26
+Riparian Buffers,0.05,0.05,0.1,0.075,0.05,0.065
+Fishing Management Areas (Gap Status 2),0,0.225,0.15,0,0.45,0.165
+Critical Habitat (ESA),0.2,0.2,0.2,0.4,0.3,0.26
+Research Natural Area & Wilderness Area (Gap Status 1),0.6,0.5,0.8,1,0.8,0.74
+Research Natural Area & Wilderness Area (Gap Status 2),0.45,0.375,0.6,0.75,0.6,0.555
+National Park (Gap Status 1),0.5,0.5,0.8,0.8,0.8,0.68
+National Park (Gap Status 2),0.375,0.375,0.6,0.6,0.6,0.51
+National Monument & State Park (Gap Status 1),0.2,0.2,0.6,0.6,0.4,0.4
+National Monument & State Park (Gap Status 2),0.15,0.15,0.45,0.45,0.3,0.3
+National Wildlife Refuge (Gap Status 1),0.2,0.2,0.4,0.8,0.6,0.44
+National Wildlife Refuge (Gap Status 2),0.15,0.15,0.3,0.6,0.45,0.33
+Conservation Area (Gap Status 1),0.2,0.2,0.4,0.7,0.6,0.42
+Conservation Area (Gap Status 2),0.15,0.15,0.3,0.525,0.45,0.315
+State Resource Management Area (Gap Status 1),0.2,0.2,0.4,0.7,0.6,0.42
+State Resource Management Area (Gap Status 2),0.15,0.15,0.3,0.525,0.45,0.315
+Area of Critical Environmental Concern (Gap Status 3),0.075,0.075,0.15,0.3,0.3,0.18
+Inventoried Roadless Area (Gap Status 3),0.075,0.075,0.15,0.3,0.3,0.18
+"Scenic Riverways, National Rivers & Recreation Areas (Gap Status 3)",0.15,0.15,0.2,0.2,0.15,0.17
+"Riparian, Floodplain, Wetland Protection Areas (Gap Status 3)",0.1,0.075,0.15,0.15,0.15,0.125
+Watershed Protection Areas (Gap Status 3),0.05,0.075,0.15,0.1,0.1,0.095
+Fishing Management Areas (Gap Status 3),0,0.0875,0.075,0.1,0.15,0.0825
+Conservation Area (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+Conservation Easement (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+Local Conservation Area & Local Park (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+National Forest & National Grassland (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+Private Conservation (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+State Resource Management Area (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+State Park & Recreation Area (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06
+Other (Gap Status 3),0.025,0.025,0.05,0.1,0.1,0.06

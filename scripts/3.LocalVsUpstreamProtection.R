@@ -5,14 +5,14 @@
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
-#Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
+#Data can be found at: 10.5281/zenodo.17279334
 
 #----------------------------------------------------
 #Estimate protection per state
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data ----
-net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv")
+net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
 
 # pad with zeros and drop missing HUC12
 net_protect_seg_fin <- net_protect_seg_fin %>%
@@ -21,6 +21,11 @@ net_protect_seg_fin <- net_protect_seg_fin %>%
     HUC6   = substr(HUC_12, 1, 6),
   ) %>%
   filter(!is.na(HUC_12))
+
+net_protect_seg_fin$PRI_Class <- ifelse(net_protect_seg_fin$PRI == 0,"Unprotected",ifelse(net_protect_seg_fin$PRI <= 1.25, "Class 4",
+                                                                                          ifelse(net_protect_seg_fin$PRI <= 2.5 & net_protect_seg_fin$PRI > 1.25, "Class 3",
+                                                                                                 ifelse(net_protect_seg_fin$PRI <= 3.75  & net_protect_seg_fin$PRI > 2.5, "Class 2",
+                                                                                                        ifelse(net_protect_seg_fin$PRI > 3.75, "Class 1",NA)))))
 
 # ---- Reference hydro data ----
 #Available at https://www.epa.gov/waterdata/nhdplus-national-data
@@ -43,8 +48,8 @@ for (i in ST) {
   
   # In-state protection
   prot_in <- aggregate(
-    . ~ RIP_Class + State,
-    data = ns[, c("OverallProtection_Len_m", "Total_Length_m", "RIP_Class", "State")],
+    . ~ PRI_Class + State,
+    data = ns[, c("FinalProt_LenT", "TotalLen", "PRI_Class", "State")],
     sum,
     na.action = na.pass
   )
@@ -56,8 +61,8 @@ for (i in ST) {
   # Out-of-state protection in the same basins
   ouns <- net_protect_seg_fin[net_protect_seg_fin$HUC6 %in% H6 & net_protect_seg_fin$State != i, , drop = FALSE]
   prot_out <- aggregate(
-    . ~ RIP_Class + State,
-    data = ouns[, c("OverallProtection_Len_m", "Total_Length_m", "RIP_Class", "State")],
+    . ~ PRI_Class + State,
+    data = ouns[, c("FinalProt_LenT", "TotalLen", "PRI_Class", "State")],
     sum,
     na.action = na.pass
   )
@@ -100,8 +105,8 @@ for (i in ST) {
     
     if (nrow(ouns_us) > 0) {
       prot_out_us <- aggregate(
-        . ~ RIP_Class + State,
-        data = ouns_us[, c("OverallProtection_Len_m", "Total_Length_m", "RIP_Class", "State")],
+        . ~ PRI_Class + State,
+        data = ouns_us[, c("FinalProt_LenT", "TotalLen", "PRI_Class", "State")],
         sum,
         na.action = na.pass
       )
@@ -124,12 +129,12 @@ for (i in ST) {
 
 # ---- Add Alaska & Hawaii (no upstream connections)
 ns <- net_protect_seg_fin[which(net_protect_seg_fin$State == "Hawaii"),]
-prot_in <- aggregate(. ~ RIP_Class + State,sum,data=ns[,c("OverallProtection_Len_m","Total_Length_m","RIP_Class","State")],na.action = na.pass)
+prot_in <- aggregate(. ~ PRI_Class + State,sum,data=ns[,c("FinalProt_LenT","TotalLen","PRI_Class","State")],na.action = na.pass)
 prot_in$IN <- "Hawaii"
 PROTECTION <- rbind(PROTECTION,prot_in)
 
 ns <- net_protect_seg_fin[which(net_protect_seg_fin$State == "Alaska"),]
-prot_in <- aggregate(. ~ RIP_Class + State,sum,data=ns[,c("OverallProtection_Len_m","Total_Length_m","RIP_Class","State")],na.action = na.pass)
+prot_in <- aggregate(. ~ PRI_Class + State,sum,data=ns[,c("FinalProt_LenT","TotalLen","PRI_Class","State")],na.action = na.pass)
 prot_in$IN <- "Alaska"
 PROTECTION <- rbind(PROTECTION,prot_in)
 
@@ -142,8 +147,10 @@ write.csv(PROTECTION,"outputs/Protection_states_InOut_huc12.csv", row.names = FA
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data & select viable protection only ----
-net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv") %>%
-  filter(RIP_Class %in% c("Class 1","Class 2","Class 3"))
+net_protect_seg_fin <- read.csv("data/NPRALayer_segment_managementType.csv") %>%
+  filter(PRI_Class %in% c("Class 1","Class 2","Class 3"))
+
+#Additional file that gives the designation type together with the management type for each segment
 
 # ---- Assign protection types by hand or use management type from PAD-US (already extracted) ----
 net_protect_seg_fin <- net_protect_seg_fin %>%
@@ -306,7 +313,7 @@ write.csv(PROTECTION,"outputs/Management_states_InOut_huc12.csv")
 library(reshape2); library(tidyverse); library(ggplot2); library(vcd)
 
 #get viable protection (in %)
-PROTECTION <- read.csv("data/Protection_states_InOut_huc12.csv")
+PROTECTION <- read.csv("outputs/Protection_states_InOut_huc12.csv")
 
 #Format data
 names(PROTECTION)[names(PROTECTION)=="IN"] <- "To"
@@ -315,18 +322,18 @@ names(PROTECTION)[names(PROTECTION)=="State"] <- "From"
 PROTECTION$Dir <- paste(PROTECTION$From,PROTECTION$To,sep="_")
 PROTECTION$INOUT <-  ifelse(PROTECTION$From == PROTECTION$To,"in","out")
 
-inState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
-outOfState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
+inState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
+outOfState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$To[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
 
-OeIn <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)
-OeOut <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)
+OeIn <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)
+OeOut <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)
 
 inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
 outOfState <- outOfState*100/OeOut[match(names(outOfState),names(OeOut))]
 pp <- data.frame(Protection = c(-inState,outOfState),State = c(names(inState),names(outOfState)),Status=c(rep("In-State",length(inState)),rep("Out-State",length(outOfState))))
 
 #get protection type
-MANAG <- read.csv("data/Management_states_InOut_huc12.csv")
+MANAG <- read.csv("outputs/Management_states_InOut_huc12.csv")
 
 #reduce number of categories
 MANAG$Mng_Typ <- ifelse(MANAG$Mng_Typ %in% c("Joint","Regional Agency Special District","Unknown","American Indian Lands"),"Other",MANAG$Mng_Typ)
@@ -382,8 +389,8 @@ state_plot <- state_plot[,c("Federal","State","Local","Private","Other")]
 state_plotOut <- state_plotOut[,c("Federal","State","Local","Private","Other")]
 
 #remove District of columbia for the figure
-state_plot <- state_plot[- which(rownames(state_plot) == "District of Columbia"),]
-state_plotOut <- state_plotOut[-which(rownames(state_plotOut) == "District of Columbia"),]
+state_plot <- state_plot[which(!rownames(state_plot) == "District of Columbia"),]
+state_plotOut <- state_plotOut[which(!rownames(state_plotOut) == "District of Columbia"),]
 
 cols_bar <- c("#8B633DFF", "darkolivegreen", "#C4B57CFF", "#CB4E33FF", "#AECCDFFF")
 
@@ -423,7 +430,7 @@ dev.off()
 library(circlize); library(reshape2); library(googleVis); library(networkD3); library(tidyverse); library(viridis)
 library(patchwork); library(hrbrthemes); library(webshot); library(Polychrome); library(vcd)
 
-PROTECTION <- read.csv("data/Protection_states_InOut_huc12.csv")
+PROTECTION <- read.csv("outputs/Protection_states_InOut_huc12.csv")
 names(PROTECTION)[names(PROTECTION)=="IN"] <- "To"
 names(PROTECTION)[names(PROTECTION)=="State"] <- "From"
 
@@ -432,14 +439,14 @@ PROTECTION$INOUT <-  ifelse(PROTECTION$From == PROTECTION$To,"in","out")
 
 #percentage of state-specific protection
 #river miles viable protection for each connection from --> to
-P <- tapply(PROTECTION$OverallProtection_Len_m[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],sum)
+P <- tapply(PROTECTION$FinalProt_LenT[PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3")],sum)
 
 #percentage of viable protection in-state versus out of state
-inState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
-outOfState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
+inState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
+outOfState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
 
-OeIn <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
-OeOut <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
+OeIn <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
+OeOut <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
 
 inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
 outOfState <- outOfState*100/OeOut[match(sapply(strsplit(names(outOfState),"_"),'[',2),names(OeOut))]
@@ -517,7 +524,7 @@ webshot("outputs/SankeyProtection_huc12.html","outputs/SankeyProtection_huc12.jp
 #----------------------------------------------------------------
 #Example Colorado River Basin
 #---------------------------------------------------------------
-PROTECTION <- read.csv("data/Protection_CRBstates_InOut_huc12.csv") #obtained using same script as before but with network cropped to HUC02 - 14 & 15
+PROTECTION <- read.csv("outputs/Protection_CRBstates_InOut_huc12.csv") #obtained using same script as before but with network cropped to HUC02 - 14 & 15
 names(PROTECTION)[names(PROTECTION)=="IN"] <- "To"
 names(PROTECTION)[names(PROTECTION)=="State"] <- "From"
 PROTECTION$Dir <- paste(PROTECTION$From,PROTECTION$To,sep="_")
@@ -528,16 +535,16 @@ PROTECTION$Dir <- paste(PROTECTION$From,PROTECTION$To,sep="_")
 
 #percentage of state-specific protection
 #river miles viable protection for each connection from --> to
-P <- tapply(PROTECTION$OverallProtection_Len_m[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3")],sum)
+P <- tapply(PROTECTION$FinalProt_LenT[PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3")],PROTECTION$Dir[PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3")],sum)
 
 #Option 3: percentage of viable protection in-state versus out of state
 PROTECTION$INOUT <-  ifelse(PROTECTION$From == PROTECTION$To,"in","out")
 
-inState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
-outOfState <- tapply(PROTECTION$OverallProtection_Len_m[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$RIP_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
+inState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "in")],PROTECTION$To[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="in")],sum)
+outOfState <- tapply(PROTECTION$FinalProt_LenT[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT == "out")],PROTECTION$Dir[which(PROTECTION$PRI_Class %in% c("Class 1","Class 2","Class 3") & PROTECTION$INOUT=="out")],sum)
 
-OeIn <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
-OeOut <- tapply(PROTECTION$Total_Length_m[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
+OeIn <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "in"],PROTECTION$To[PROTECTION$INOUT == "in"],sum)#total river miles in state
+OeOut <- tapply(PROTECTION$TotalLen[PROTECTION$INOUT == "out"],PROTECTION$To[PROTECTION$INOUT == "out"],sum)#total river miles coming from other state
 
 inState <- inState*100/OeIn[match(names(inState),names(OeIn))]
 outOfState <- outOfState*100/OeOut[match(sapply(strsplit(names(outOfState),"_"),'[',2),names(OeOut))]

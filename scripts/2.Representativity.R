@@ -5,11 +5,16 @@
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
-#Data can be found at: https://figshare.com/s/62d2f6da57b9526a9aee
+#Data can be found at: 10.5281/zenodo.17279334
 
 library(sf); library(reshape2); library(stringr); library(dplyr); library(ggplot2)
 
-net_protect_seg_fin <- read.csv("data/Table_protection_segments_RIPAllCombined.csv") #tabular version of NPRALayer_segment
+net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
+
+net_protect_seg_fin$PRI_Class <- ifelse(net_protect_seg_fin$PRI == 0,"Unprotected",ifelse(net_protect_seg_fin$PRI <= 1.25, "Class 4",
+                                                                                          ifelse(net_protect_seg_fin$PRI <= 2.5 & net_protect_seg_fin$PRI > 1.25, "Class 3",
+                                                                                                 ifelse(net_protect_seg_fin$PRI <= 3.75  & net_protect_seg_fin$PRI > 2.5, "Class 2",
+                                                                                                        ifelse(net_protect_seg_fin$PRI > 3.75, "Class 1",NA)))))
 
 #-------------------------------------------------------
 #Import the data
@@ -53,17 +58,17 @@ net_s <- net_s[!(is.na(net_s$State)),]
 dim(net_s)
 
 #Keep only digitized flow
-table(net_s$FLOWDIR[!net_s$COMID %in% dat$COMID],useNA="ifany")
-net_s <- net_s[(net_s$FLOWDIR %in% c("With Digitized")),] 
+table(net_s$FLOWDIR[!net_s$COMID_nhdv2 %in% dat$COMID],useNA="ifany")
+net_s <- net_s[(net_s$FLOWDIR %in% c("WithDigitized")),] 
 
 #Add elevation
 #MINELEVRAW from NHDPlusV2.1 (https://www.epa.gov/waterdata/get-nhdplus-national-hydrography-dataset-plus-data)
-EI <- read.csv("data/Contextualization_NPRA.csv")
-net_s <- data.frame(net_s,Elev = EI$MINELEVRAW[match(net_s$COMID_LC,EI$COMID_L)])
+EI <- read.csv("data/Ele_NPRA.csv")
+net_s <- data.frame(net_s,Elev = EI$MINELEVRAW[match(net_s$COMID_nhdv2,EI$COMID)])
 
 #Merge data
-net_s <- data.frame(net_s,dat[match(net_s$COMID,dat$COMID),])
-net_s <- net_s[,-which(names(net_s)%in% "COMID.1")]
+net_s <- data.frame(net_s,dat[match(net_s$COMID_nhdv2,dat$COMID),])
+
 
 #Remove missing data
 net_s[which(is.na(net_s$Size_Class)),]
@@ -94,16 +99,16 @@ table(net_s$Elev_c,useNA="ifany")*100/sum(table(net_s$Elev_c,useNA="ifany"))
 #Prepare dataset
 vari = rev(c("Class 4", "Class 3","Class 2","Class 1"))
 cols_bar <- (c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))
-F_stat_state <- aggregate(OverallProtection_Len_m ~ Elev_c + RIP_Class,sum,data=net_s[net_s$RIP_Class %in% c("Class 1","Class 2","Class 3","Class 4"),])
-F_stat_stateT <- aggregate(Total_Length_m ~ Elev_c,sum,data=net_s)
-F_stat_state$protect <- F_stat_state$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state$Elev_c,F_stat_stateT$Elev_c)]
-F_stat_state$RIP_Class <- factor(F_stat_state$RIP_Class)
+F_stat_state <- aggregate(FinalProt_LenT ~ Elev_c + PRI_Class,sum,data=net_s[net_s$PRI_Class %in% c("Class 1","Class 2","Class 3","Class 4"),])
+F_stat_stateT <- aggregate(TotalLen ~ Elev_c,sum,data=net_s)
+F_stat_state$protect <- F_stat_state$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state$Elev_c,F_stat_stateT$Elev_c)]
+F_stat_state$PRI_Class <- factor(F_stat_state$PRI_Class)
 
-state_plot <- acast(F_stat_state, Elev_c~factor(RIP_Class,levels=vari), value.var="protect")
+state_plot <- acast(F_stat_state, Elev_c~factor(PRI_Class,levels=vari), value.var="protect")
 state_plot <- ifelse(is.na(state_plot)==T,0,state_plot)
 state_plot <- state_plot[,!colnames(state_plot) %in% "Unprotected"]
 
-forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+forPie <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(forPie) <- F_stat_stateT$Elev_c
 forPie <- forPie[rownames(state_plot)]
 
@@ -166,12 +171,12 @@ table(net_protect_seg_fin$Basin ,useNA="ifany")*100/sum(table(net_protect_seg_fi
 
 #Prepare file
 vari = c("Class 4","Class 3","Class 2","Class 1")
-F_stat_state <- aggregate(OverallProtection_Len_m ~ Basin + RIP_Class,sum,data=net_protect_seg_fin)
-F_stat_stateT <- aggregate(Total_Length_m ~ Basin,sum,data=net_protect_seg_fin)
-F_stat_state$protect <- F_stat_state$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state$Basin,F_stat_stateT$Basin)]
-F_stat_state$RIP_Class <- factor(F_stat_state$RIP_Class)
+F_stat_state <- aggregate(FinalProt_LenT ~ Basin + PRI_Class,sum,data=net_protect_seg_fin)
+F_stat_stateT <- aggregate(TotalLen ~ Basin,sum,data=net_protect_seg_fin)
+F_stat_state$protect <- F_stat_state$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state$Basin,F_stat_stateT$Basin)]
+F_stat_state$PRI_Class <- factor(F_stat_state$PRI_Class)
 
-state_plot <- acast(F_stat_state, Basin~RIP_Class, value.var="protect")
+state_plot <- acast(F_stat_state, Basin~PRI_Class, value.var="protect")
 state_plot <- ifelse(is.na(state_plot)==T,0,state_plot)
 state_plot <- state_plot[,!colnames(state_plot) %in% "Unprotected"]
 state_plot <- data.frame(state_plot,Unprotected = as.vector(100 - apply(state_plot,1,sum)))
@@ -184,7 +189,7 @@ colnames(state_plot) <- gsub("Class 2","Effective",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 3","Limited",colnames(state_plot))
 colnames(state_plot) <- gsub("Class 4","Inadequate",colnames(state_plot))
 
-forPie <- F_stat_stateT$Total_Length_m
+forPie <- F_stat_stateT$TotalLen
 names(forPie) <- F_stat_stateT$Basin
 
 #Piechart
@@ -232,12 +237,12 @@ table(net_protect_seg_fin$ECOREGION ,useNA="ifany")*100/sum(table(net_protect_se
 
 #Prepare table
 vari = c("Class 4","Class 3","Class 2","Class 1")
-F_stat_state <- aggregate(OverallProtection_Len_m ~ ECOREGION + RIP_Class,sum,data=net_protect_seg_fin)
-F_stat_stateT <- aggregate(Total_Length_m ~ ECOREGION,sum,data=net_protect_seg_fin)
-F_stat_state$protect <- F_stat_state$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state$ECOREGION,F_stat_stateT$ECOREGION)]
-F_stat_state$RIP_Class <- factor(F_stat_state$RIP_Class)
+F_stat_state <- aggregate(FinalProt_LenT ~ ECOREGION + PRI_Class,sum,data=net_protect_seg_fin)
+F_stat_stateT <- aggregate(TotalLen ~ ECOREGION,sum,data=net_protect_seg_fin)
+F_stat_state$protect <- F_stat_state$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state$ECOREGION,F_stat_stateT$ECOREGION)]
+F_stat_state$PRI_Class <- factor(F_stat_state$PRI_Class)
 
-state_plot <- acast(F_stat_state, ECOREGION~RIP_Class, value.var="protect")
+state_plot <- acast(F_stat_state, ECOREGION~PRI_Class, value.var="protect")
 state_plot <- ifelse(is.na(state_plot)==T,0,state_plot)
 state_plot <- state_plot[,!colnames(state_plot) %in% "Unprotected"]
 state_plot <- data.frame(state_plot,Unprotected = as.vector(100 - apply(state_plot,1,sum)))
@@ -246,7 +251,7 @@ state_plot <- state_plot[!rownames(state_plot)=="NA (NA)",]
 
 cols_bar <- (c("#CCCCCC","#C500FF","#00C5FF","#0070FF"))
 
-forPie <- F_stat_stateT$Total_Length_m[order(apply(state_plot[,1:3],1,sum))]
+forPie <- F_stat_stateT$TotalLen[order(apply(state_plot[,1:3],1,sum))]
 names(forPie) <- F_stat_stateT$ECOREGION[order(apply(state_plot[,1:3],1,sum))]
 names(forPie) <- sapply(strsplit(as.character(names(forPie)),"(",fixed=T),'[',2)
 names(forPie) <- gsub(")","",names(forPie))
@@ -260,7 +265,7 @@ colnames(state_plot) <- gsub("Class.4","Inadequate",colnames(state_plot))
 #Figure
 jpeg("outputs/BarplotECOREGION_v2.jpeg", units="in", width=10, height=8, res=300, pointsize = 16)
 
-forPie <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+forPie <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(forPie) <- F_stat_stateT$ECOREGION
 forPie <- forPie[rownames(state_plot)]
 
@@ -280,13 +285,13 @@ dev.off()
 #------------------------------------------------------------------------------------------
 #combined figure - Representativity [Figure 2]
 
-net_s$RIP_Class <- factor(net_s$RIP_Class,levels=c("Unprotected","Class 4","Class 3","Class 2","Class 1"))
+net_s$PRI_Class <- factor(net_s$PRI_Class,levels=c("Unprotected","Class 4","Class 3","Class 2","Class 1"))
 
 #Major habitat types
-F_stat_state1 <- aggregate(OverallProtection_Len_m ~ MHT_TXT + RIP_Class,sum,data=net_protect_seg_fin,drop=F)
-F_stat_stateT <- aggregate(Total_Length_m ~ MHT_TXT,sum,data=net_protect_seg_fin,drop=F)
-F_stat_state1$OverallProtection_Len_m <- F_stat_state1$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state1$MHT_TXT,F_stat_stateT$MHT_TXT)]
-F_stat_state1$RIP_Class <- factor(F_stat_state1$RIP_Class)
+F_stat_state1 <- aggregate(FinalProt_LenT ~ MHT_TXT + PRI_Class,sum,data=net_protect_seg_fin,drop=F)
+F_stat_stateT <- aggregate(TotalLen ~ MHT_TXT,sum,data=net_protect_seg_fin,drop=F)
+F_stat_state1$FinalProt_LenT <- F_stat_state1$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state1$MHT_TXT,F_stat_stateT$MHT_TXT)]
+F_stat_state1$PRI_Class <- factor(F_stat_state1$PRI_Class)
 names(F_stat_state1) <- c("individual","observation","value")
 F_stat_state1$group = "Ecoregion"
 
@@ -302,10 +307,10 @@ net_s$Size_Class <- ifelse(net_s$Size_Class=="HW","Headwater",
                                                                              ifelse(net_s$Size_Class=="GR","Great river",NA))))))))
 
 net_s$Size_Class <- factor(net_s$Size_Class,levels=c("Headwater","Small creek","Large creek","Small river","Medium river","Mainstem","Large river","Great river"))
-F_stat_state2 <- aggregate(OverallProtection_Len_m ~ Size_Class + RIP_Class,sum,data=net_s,drop=F)
-F_stat_stateT <- aggregate(Total_Length_m ~ Size_Class,sum,data=net_s,drop=F)
-F_stat_state2$OverallProtection_Len_m <- F_stat_state2$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state2$Size_Class,F_stat_stateT$Size_Class)]
-F_stat_state2$RIP_Class <- factor(F_stat_state2$RIP_Class)
+F_stat_state2 <- aggregate(FinalProt_LenT ~ Size_Class + PRI_Class,sum,data=net_s,drop=F)
+F_stat_stateT <- aggregate(TotalLen ~ Size_Class,sum,data=net_s,drop=F)
+F_stat_state2$FinalProt_LenT <- F_stat_state2$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state2$Size_Class,F_stat_stateT$Size_Class)]
+F_stat_state2$PRI_Class <- factor(F_stat_state2$PRI_Class)
 names(F_stat_state2) <- c("individual","observation","value")
 F_stat_state2$group = "Size class"
 F_stat_state2 <- F_stat_state2[!is.na(F_stat_state2$individual)==T,]
@@ -313,10 +318,10 @@ F_stat_state2 <- F_stat_state2[!is.na(F_stat_state2$individual)==T,]
 #Temperature regime
 net_s$JulAug_Class[net_s$JulAug_Class=="Very Cold"] <- "Cold"
 net_s$JulAug_Class <- factor(net_s$JulAug_Class,levels=c("Cold","Cool","Cool-Warm","Warm"))
-F_stat_state3 <- aggregate(OverallProtection_Len_m ~ JulAug_Class + RIP_Class,sum,data=net_s,drop=F)
-F_stat_stateT <- aggregate(Total_Length_m ~ JulAug_Class,sum,data=net_s,drop=F)
-F_stat_state3$OverallProtection_Len_m <- F_stat_state3$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state3$JulAug_Class,F_stat_stateT$JulAug_Class)]
-F_stat_state3$RIP_Class <- factor(F_stat_state3$RIP_Class)
+F_stat_state3 <- aggregate(FinalProt_LenT ~ JulAug_Class + PRI_Class,sum,data=net_s,drop=F)
+F_stat_stateT <- aggregate(TotalLen ~ JulAug_Class,sum,data=net_s,drop=F)
+F_stat_state3$FinalProt_LenT <- F_stat_state3$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state3$JulAug_Class,F_stat_stateT$JulAug_Class)]
+F_stat_state3$PRI_Class <- factor(F_stat_state3$PRI_Class)
 names(F_stat_state3) <- c("individual","observation","value")
 F_stat_state3$group = "Temperature class"
 
@@ -328,10 +333,10 @@ net_s$g8[net_s$g8 %in% c(2,6) ] <- "Snowmelt"
 net_s$g8[net_s$g8 %in% c(3) ] <- "Stable baseflow"
 net_s$g8[net_s$g8 %in% c(0) ] <- NA
 
-F_stat_state4 <- aggregate(OverallProtection_Len_m ~ g8 + RIP_Class,sum,data=net_s,drop=F)
-F_stat_stateT <- aggregate(Total_Length_m ~ g8,sum,data=net_s,drop=F)
-F_stat_state4$OverallProtection_Len_m <- F_stat_state4$OverallProtection_Len_m*100/F_stat_stateT$Total_Length_m[match(F_stat_state4$g8,F_stat_stateT$g8)]
-F_stat_state4$RIP_Class <- factor(F_stat_state4$RIP_Class)
+F_stat_state4 <- aggregate(FinalProt_LenT ~ g8 + PRI_Class,sum,data=net_s,drop=F)
+F_stat_stateT <- aggregate(TotalLen ~ g8,sum,data=net_s,drop=F)
+F_stat_state4$FinalProt_LenT <- F_stat_state4$FinalProt_LenT*100/F_stat_stateT$TotalLen[match(F_stat_state4$g8,F_stat_stateT$g8)]
+F_stat_state4$PRI_Class <- factor(F_stat_state4$PRI_Class)
 names(F_stat_state4) <- c("individual","observation","value")
 F_stat_state4$group = "Hydrology class"
 
@@ -339,21 +344,21 @@ data <- rbind(F_stat_state1,F_stat_state2,F_stat_state3,F_stat_state4)
 data$group <- factor(data$group,levels=c("Ecoregion","Size class","Hydrology class","Temperature class"))
 
 #Total length per category
-F_stat_stateT <- aggregate(Total_Length_m ~ MHT_TXT,sum,data=net_protect_seg_fin)
-a <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+F_stat_stateT <- aggregate(TotalLen ~ MHT_TXT,sum,data=net_protect_seg_fin)
+a <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(a) <- F_stat_stateT$MHT_TXT
 
-F_stat_stateT <- aggregate(Total_Length_m ~ Size_Class,sum,data=net_s)
-b <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+F_stat_stateT <- aggregate(TotalLen ~ Size_Class,sum,data=net_s)
+b <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(b) <- F_stat_stateT$Size_Class
 b <- b[!is.na(names(b))]
 
-F_stat_stateT <- aggregate(Total_Length_m ~ JulAug_Class,sum,data=net_s)
-c <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+F_stat_stateT <- aggregate(TotalLen ~ JulAug_Class,sum,data=net_s)
+c <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(c) <- F_stat_stateT$JulAug_Class
 
-F_stat_stateT <- aggregate(Total_Length_m ~ g8,sum,data=net_s)
-d <- F_stat_stateT$Total_Length_m*100/sum(F_stat_stateT$Total_Length_m)
+F_stat_stateT <- aggregate(TotalLen ~ g8,sum,data=net_s)
+d <- F_stat_stateT$TotalLen*100/sum(F_stat_stateT$TotalLen)
 names(d) <- F_stat_stateT$g8
 
 data_c <- data.frame(individual = c(names(a),names(b),names(c),names(d)),
@@ -364,6 +369,10 @@ data_c$group <- factor(data_c$group,levels=c("Ecoregion","Size class","Hydrology
 data_c$value <- -data_c$value
 data_c$observation <- "Representation"
 
+#save data
+data <- rbind(data,data_c)
+data$value[is.na(data$value)] <- 0
+write.csv(data,"outputs/representativness.csv")
 
 #Prepare table
 data$observation <- factor(data$observation)
@@ -380,7 +389,7 @@ data$id <- rep( seq(1, nrow(data)/nObsType) , each=nObsType)
 data <- data[-which(data$observation == "Unprotected"),]
 
 # Get the name and the y position of each label
-label_data <- data %>% group_by(id, individual) %>% summarize(tot=sum(value[!observation == "Representation"]))
+label_data <- data %>% group_by(id, individual) %>% summarize(tot=sum(value[!observation == "Representation"],na.rm=T))
 number_of_bar <- nrow(label_data)
 angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     
 label_data$hjust <- ifelse( angle < -90, 1, 0)
@@ -434,10 +443,10 @@ p <- ggplot(data) +
   geom_segment(data=grid_data, aes(x = end, y = 60, xend = start, yend = 60), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   geom_segment(data=grid_data, aes(x = end, y = 80, xend = start, yend = 80), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   
-  geom_segment(data=grid_data, aes(x = end, y = -20, xend = start, yend = 20), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
-  geom_segment(data=grid_data, aes(x = end, y = -40, xend = start, yend = 40), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
-  geom_segment(data=grid_data, aes(x = end, y = -60, xend = start, yend = 60), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
-  geom_segment(data=grid_data, aes(x = end, y = -80, xend = start, yend = 80), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
+  # geom_segment(data=grid_data, aes(x = end, y = -20, xend = start, yend = 20), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
+  # geom_segment(data=grid_data, aes(x = end, y = -40, xend = start, yend = 40), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
+  # geom_segment(data=grid_data, aes(x = end, y = -60, xend = start, yend = 60), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
+  # geom_segment(data=grid_data, aes(x = end, y = -80, xend = start, yend = 80), colour = "grey", alpha=1, linewidth=0.3 , inherit.aes = FALSE ) +
   
   # Add text showing the value axes
   ggplot2::annotate("text", x = rep(max(data$id),5), y = c(0, 20, 40, 60, 80), label = c("0%", "20%", "40%", "60%", "80%") , color="grey", size=3 , angle=0, fontface="bold", hjust=1) +
@@ -465,22 +474,22 @@ ggsave("outputs/Figurerepresentativity.jpeg", plot=p,width=8, height=8)
 #Assessing unbalances
 
 #Hydrology type
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
+p_obs <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Comprehensive","Effective","Limited","Inadequate"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Hydrology class" & data$observation %in% c("Representation"),])
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
+chisq.test(p_obs$value, p=abs(p_tot$value)/100) #p-value < 2.2e-16
 
 #River basin
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
+p_obs <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Comprehensive","Effective","Limited","Inadequate"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Ecoregion" & data$observation %in% c("Representation"),])
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
+chisq.test(p_obs$value, p=abs(p_tot$value)/100) #p-value < 2.2e-16
 
 #size class
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
+p_obs <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Comprehensive","Effective","Limited","Inadequate"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Size class" & data$observation %in% c("Representation"),])
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value < 2.2e-16
+chisq.test(p_obs$value, p=abs(p_tot$value)/100) #p-value < 2.2e-16
 
 #Temperature class
-p_obs <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Class 1","Class 2","Class 3","Class 4"),])
+p_obs <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Comprehensive","Effective","Limited","Inadequate"),])
 p_tot <- aggregate(value~individual,sum,data=data[data$group=="Temperature class" & data$observation %in% c("Representation"),])
-chisq.test(p_obs$value, p=p_tot$value/100) #p-value = 0.02623
+chisq.test(p_obs$value, p=abs(p_tot$value)/100) #p-value = 0.02623
 
