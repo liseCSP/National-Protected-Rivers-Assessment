@@ -5,14 +5,13 @@
 #Lise Comte, April 2025
 #in RStudio 2023.06.0+421 "Mountain Hydrangea" Release (583b465ecc45e60ee9de085148cd2f9741cc5214, 2023-06-05) for windows
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
-
-#Data can be found at: 10.5281/zenodo.17279334
+#Contact: lise@csp-inc.org
 
 library(corrplot)
 
 #------------------------------------
 #Figure -full
-
+#------------------------------------
 W_nice <- read.csv('data/Matrix of weights for figure_clean.csv')#to get the labels
 
 rownames(W_nice) <- W_nice[,1]
@@ -26,8 +25,8 @@ dev.off()
 #---------------------------------------------------------------
 #Simplified version
 #---------------------------------------------------------------
-#which are the most common subcategories?
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_managementType.csv")
+#which are the most common subcategories (to inform the figure)?
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments_managementType.csv")
 table(net_protect_seg_fin$IUCNI_Des_Tp,net_protect_seg_fin$IUCNI_Gap_Sts) 
 table(net_protect_seg_fin$IUCNII_Des_Tp,net_protect_seg_fin$IUCNII_Gap_Sts) 
 table(net_protect_seg_fin$RFPA_Des_Tp,net_protect_seg_fin$RFPA_Gap_Sts) 

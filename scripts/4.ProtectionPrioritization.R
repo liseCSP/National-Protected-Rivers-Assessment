@@ -7,10 +7,12 @@
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
 #Data can be found at: 10.5281/zenodo.17279334
+#Contact: lise@csp-inc.org
 
+#------------------------------------
 library(sf); library(tidyverse); library(spatialEco); library(naniar)
 
-huc12 <- st_read("data/NPRALayer_huc12_download.gpkg")
+huc12 <- st_read("data/PRA_US_subwatersheds.gpkg")
 
 #summaries of the watersheds
 dim(huc12)
@@ -151,14 +153,14 @@ huc12 <- huc12[,!names(huc12) %in% c("Join_Count","Target_FID","total_mi","right
 huc12$LateralCStateTot[is.na(huc12$LatConnect)] <- NA #it was just to aggregate values but values should be NA
 
 #save file
-st_write(huc12, "outputs/RIP_huc12_prioritization.gpkg",append=FALSE)  
+st_write(huc12, "outputs/PRA_US_subwatersheds_prioritization.gpkg",append=FALSE)  
 
 #--------------------------------------------------------------
 #Overlap among indicators
 
 library(ggplot2);library(introdataviz); library(sf)
 
-huc12_p <- st_read("outputs/RIP_huc12_prioritization.gpkg")
+huc12_p <- st_read("outputs/PRA_US_subwatersheds_prioritization.gpkg")
 
 #remove missing values (lake watersheds)
 huc12_p <- huc12_p[!is.na(huc12_p$BioIndTop25Tot) == T,]
@@ -195,7 +197,7 @@ dev.off()
 
 library(ggplot2);library(introdataviz); library(sf)
 
-huc12_p <- st_read("outputs/RIP_huc12_prioritization.gpkg")
+huc12_p <- st_read("outputs/PRA_US_subwatersheds_prioritization.gpkg")
 
 four_quadrant_facet <- function(x_list, color_sets, col_text="grey") {    
   df_list <- lapply(seq_along(x_list), function(i) {

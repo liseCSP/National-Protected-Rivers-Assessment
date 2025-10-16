@@ -6,13 +6,14 @@
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
 #Data can be found at: 10.5281/zenodo.17279334
+#Contact: lise@csp-inc.org
 
 #----------------------------------------------------
 #Estimate protection per state
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data ----
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments.csv",h=T) #tabular version of geopackage
 
 # pad with zeros and drop missing HUC12
 net_protect_seg_fin <- net_protect_seg_fin %>%
@@ -147,10 +148,10 @@ write.csv(PROTECTION,"outputs/Protection_states_InOut_huc12.csv", row.names = FA
 library(dplyr); library(stringr); library(sf)
 
 # ---- Load data & select viable protection only ----
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_managementType.csv") %>%
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments_managementType.csv") %>%
   filter(PRI_Class %in% c("Class 1","Class 2","Class 3"))
 
-#Additional file that gives the designation type together with the management type for each segment
+#Additional file that gives the designation type together with the management type for each segment; available upon request
 
 # ---- Assign protection types by hand or use management type from PAD-US (already extracted) ----
 net_protect_seg_fin <- net_protect_seg_fin %>%

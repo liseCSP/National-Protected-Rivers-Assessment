@@ -6,10 +6,12 @@
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
 #Data can be found at: 10.5281/zenodo.17279334
+#Contact: lise@csp-inc.org
 
+#------------------------------------
 library(sf); library(reshape2); library(stringr); library(dplyr); library(ggplot2)
 
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments.csv",h=T) #tabular version of geopackage
 
 net_protect_seg_fin$PRI_Class <- ifelse(net_protect_seg_fin$PRI == 0,"Unprotected",ifelse(net_protect_seg_fin$PRI <= 1.25, "Class 4",
                                                                                           ifelse(net_protect_seg_fin$PRI <= 2.5 & net_protect_seg_fin$PRI > 1.25, "Class 3",

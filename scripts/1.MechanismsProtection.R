@@ -6,9 +6,11 @@
 #Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) RStudio/2023.06.0+421 Chrome/110.0.5481.208 Electron/23.3.0 Safari/537.36
 
 #Data can be found at: 10.5281/zenodo.17279334
+#Contact: lise@csp-inc.org
 
+#------------------------------------
 #Upload the data
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments.csv",h=T) #tabular version of geopackage
 
  #--------------------------------------------------------------------
 #All the protection fields in miles in the tabular version
@@ -22,7 +24,7 @@ net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabu
 
 #Prepare the data for download as a geopackage
 #convert to percentages, except protected length (in miles) and PRI (2 digits for length and PRI and one digit percentages)
-# st_write(net, "data/NPRALayer_segment_download.gpkg",append=FALSE) 
+# st_write(net, "data/PRA_US_riversegments.gpkg",append=FALSE) 
 #---------------------------------------------------------------------
 
 #-------------------------------------------------
@@ -89,7 +91,7 @@ library(sf); library(data.table); library(MESS); library(dplyr)
 
 
 #segment-level data
-net_protect_seg_fin <- read.csv("data/NPRALayer_segment_download.csv",h=T) #tabular version of geopackage
+net_protect_seg_fin <- read.csv("data/PRA_US_riversegments.csv",h=T) #tabular version of geopackage
 
 #-----Remove overlap within categories 
 
@@ -163,7 +165,7 @@ write.csv(summ_all,"outputs/SummaryIndividualProtectionMechanism.csv")
 #-------------------------------------------
 #Network of mechanisms
 library(sf); library(reshape2); library(ecospat)
-net_protect_seg_fin <- st_read("data/NPRALayer_segment_download.gpkg")
+net_protect_seg_fin <- st_read("data/PRA_US_riversegments.gpkg")
 
 net_protect_seg_fin <- st_drop_geometry(net_protect_seg_fin)  #using geopackage
 
@@ -276,7 +278,7 @@ dev.off()
 #Estimate number of mechanisms per segment
 library(sf); library(reshape2)
 
-net_protect_seg_fin <- st_read("data/NPRALayer_segment_download.gpkg")
+net_protect_seg_fin <- st_read("data/PRA_US_riversegments.gpkg")
 net_protect_seg_fin <- st_drop_geometry(net_protect_seg_fin) #if using geopackage
 pick <- c(grep("RIV_|RIP_|CRI_|INC1_|INC2_|MULT1_|MULT2_",names(net_protect_seg_fin)))
 mat <- net_protect_seg_fin[,pick]
