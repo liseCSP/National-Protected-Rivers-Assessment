@@ -1,5 +1,5 @@
 # National-Protected-Rivers-Assessment
-Repository supporting the analyses presented in the manuscript "The urgent need for expanded protections to safeguarding America’s rivers"
+Repository supporting the analyses presented in the manuscript "Protected Rivers Assessment of the United States"
 
 The repository includes five R scripts to reproduce the analyses and figures presented in the manuscript. Data are available in the repository (https://doi.org/10.5281/zenodo.17279334) and otherwise sourced in the scripts. All the data should be added to the 'data' folder before running the scripts.
 
